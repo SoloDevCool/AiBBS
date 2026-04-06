@@ -1,0 +1,117 @@
+<h4 class="mb-4 text-dark fw-bold">SEO 设置</h4>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <%= form_with url: admin_seo_settings_path, method: :patch, scope: :settings, class: "needs-validation" do |f| %>
+
+      <!-- SEO 基础设置 -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-search me-2 text-success"></i>基础信息</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">配置搜索引擎优化相关的基础信息，这些信息会出现在搜索结果和社交媒体分享预览中。</p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= f.label :seo_site_name, "站点名称", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">显示在搜索引擎结果和 Open Graph 标签中</p>
+              <%= f.text_field :seo_site_name, value: @settings[:seo_site_name], class: "form-control form-control-sm", placeholder: "例如：SoloDev.Cool" %>
+            </div>
+            <div class="col-md-6">
+              <%= f.label :seo_title, "首页标题", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">首页在浏览器标签和搜索结果中显示的标题</p>
+              <%= f.text_field :seo_title, value: @settings[:seo_title], class: "form-control form-control-sm", placeholder: "例如：SoloDev.Cool - 独立开发者社区" %>
+            </div>
+            <div class="col-12">
+              <%= f.label :seo_description, "站点描述", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">用于搜索引擎结果摘要和社交媒体分享描述，建议 120-160 个字符</p>
+              <%= f.text_area :seo_description, value: @settings[:seo_description], class: "form-control form-control-sm", rows: 3, placeholder: "例如：SoloDev.Cool 是一个面向独立开发者的技术社区，分享产品、技术、创业经验..." %>
+              <div class="text-end mt-1">
+                <small class="text-muted" id="seoDescriptionCount">0 / 160</small>
+              </div>
+            </div>
+            <div class="col-12">
+              <%= f.label :seo_keywords, "关键词", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">多个关键词用英文逗号分隔</p>
+              <%= f.text_field :seo_keywords, value: @settings[:seo_keywords], class: "form-control form-control-sm", placeholder: "例如：独立开发者,创业,技术社区,Ruby on Rails" %>
+            </div>
+            <div class="col-12">
+              <%= f.label :seo_og_image, "分享封面图", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">社交媒体分享时显示的封面图片，建议尺寸 1200×630 像素。填写绝对 URL 或以 / 开头的相对路径</p>
+              <%= f.text_field :seo_og_image, value: @settings[:seo_og_image], class: "form-control form-control-sm", placeholder: "例如：https://example.com/og-image.png 或 /images/og.png" %>
+              <% if @settings[:seo_og_image].present? %>
+                <div class="mt-2">
+                  <img src="<%= @settings[:seo_og_image].start_with?("http") ? @settings[:seo_og_image] : "#{request.base_url}#{@settings[:seo_og_image]}" %>" alt="OG Image Preview" class="rounded border" style="max-height:120px; object-fit:cover">
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜索引擎验证 -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-shield-check me-2 text-info"></i>搜索引擎验证</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">添加搜索引擎站点验证代码，用于确认站点所有权并获取搜索数据。</p>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <%= f.label :seo_google_verification, "Google Search Console", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">HTML 标签验证码（content 属性值）</p>
+              <%= f.text_field :seo_google_verification, value: @settings[:seo_google_verification], class: "form-control form-control-sm", placeholder: "例如：xxxxxxxxxxxx" %>
+            </div>
+            <div class="col-md-4">
+              <%= f.label :seo_bing_verification, "Bing Webmaster", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">HTML 标签验证码（content 属性值）</p>
+              <%= f.text_field :seo_bing_verification, value: @settings[:seo_bing_verification], class: "form-control form-control-sm", placeholder: "例如：xxxxxxxxxxxx" %>
+            </div>
+            <div class="col-md-4">
+              <%= f.label :seo_baidu_verification, "百度站长", class: "form-label fw-semibold small" %>
+              <p class="text-muted mb-1" style="font-size:0.75rem">HTML 标签验证码（content 属性值）</p>
+              <%= f.text_field :seo_baidu_verification, value: @settings[:seo_baidu_verification], class: "form-control form-control-sm", placeholder: "例如：xxxxxxxxxxxx" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 页脚设置 -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-code-slash me-2 text-secondary"></i>页脚自定义代码</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">在页面底部注入自定义 HTML，用于添加网站统计代码（如 Google Analytics、百度统计、CNZZ）或其他第三方脚本。</p>
+          <div class="row g-3">
+            <div class="col-12">
+              <%= f.text_area :seo_footer_html, value: @settings[:seo_footer_html], class: "form-control form-control-sm font-monospace", rows: 6, placeholder: "例如：&#60;script async src=\"https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX\"&#62;&#60;/script&#62;" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary rounded-pill px-4">
+          <i class="bi bi-check-lg me-1"></i>保存设置
+        </button>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  var desc = document.getElementById("settings_seo_description");
+  var count = document.getElementById("seoDescriptionCount");
+  if (desc && count) {
+    function update() {
+      var len = desc.value.length;
+      count.textContent = len + " / 160";
+      count.className = len > 160 ? "text-danger" : "text-muted";
+    }
+    desc.addEventListener("input", update);
+    update();
+  }
+});
+</script>

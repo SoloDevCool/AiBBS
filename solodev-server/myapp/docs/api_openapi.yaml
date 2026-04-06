@@ -1,0 +1,1434 @@
+openapi: 3.0.3
+info:
+  title: SoloDev.Cool API
+  description: |
+    SoloDev.Cool 社区论坛 App 端 RESTful API。
+
+    ## 认证方式
+    除公开接口外，所有需认证的接口需在请求头中携带 JWT Token：
+    ```
+    Authorization: Bearer <token>
+    ```
+
+    ## 统一响应格式
+    ```json
+    { "code": 0, "message": "success", "data": { ... } }
+    ```
+
+    ## 分页
+    分页接口通过响应头传递分页信息：
+    `X-Page`, `X-Per-Page`, `X-Total`, `X-Total-Pages`
+
+    ## 业务错误码
+    | code | 含义 |
+    |------|------|
+    | 0 | 成功 |
+    | 10001 | 邮箱或密码错误 |
+    | 10002 | 验证码错误或已过期 |
+    | 10003 | 邀请码无效 |
+    | 10004 | 邀请码已使用或已过期 |
+    | 10005 | 邮箱已注册 |
+    | 10006 | 今日已签到 |
+    | 10009 | 不能给自己投票 |
+    | 10010 | 投票已关闭 |
+    | 10012 | 验证码发送过于频繁 |
+  version: 1.0.0
+  contact:
+    name: SoloDev.Cool
+
+servers:
+  - url: https://your-domain.com
+    description: 生产环境
+  - url: http://localhost:3000
+    description: 本地开发
+
+tags:
+  - name: Auth
+    description: 认证模块
+  - name: Topics
+    description: 话题模块
+  - name: Comments
+    description: 评论模块
+  - name: Interactions
+    description: 互动（点赞/打赏）
+  - name: Polls
+    description: 投票模块
+  - name: Users
+    description: 用户模块
+  - name: Nodes
+    description: 节点模块
+  - name: Profile
+    description: 个人中心
+  - name: CheckIn
+    description: 签到
+  - name: Notifications
+    description: 通知
+  - name: Images
+    description: 图片上传
+  - name: Misc
+    description: 杂项
+
+paths:
+  # ========== Auth ==========
+  /api/v1/auth/send_verification_code:
+    post:
+      tags: [Auth]
+      summary: 发送邮箱验证码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, purpose]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                purpose:
+                  type: string
+                  enum: [register, reset_password]
+      responses:
+        '200':
+          description: 验证码已发送
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: 邮箱注册
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, username, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                  minLength: 2
+                  maxLength: 20
+                password:
+                  type: string
+                  minLength: 6
+                verification_code:
+                  type: string
+                  description: 邮箱验证码（开启邮箱验证时必填）
+                invitation_code:
+                  type: string
+                  description: 邀请码（开启邀请码时必填）
+      responses:
+        '201':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token: { type: string }
+                          user: { $ref: '#/components/schemas/UserBrief' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: 邮箱登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token: { type: string }
+                          user: { $ref: '#/components/schemas/UserBrief' }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: 登出
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 已登出
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: 刷新 Token
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token: { type: string }
+
+  /api/v1/auth/reset_password:
+    post:
+      tags: [Auth]
+      summary: 重置密码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, verification_code, new_password]
+              properties:
+                email: { type: string, format: email }
+                verification_code: { type: string }
+                new_password: { type: string, minLength: 6 }
+      responses:
+        '200':
+          description: 密码已重置
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  # ========== Topics ==========
+  /api/v1/topics:
+    get:
+      tags: [Topics]
+      summary: 话题列表
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [recent, hot, followed, trending]
+            default: recent
+        - name: node_id
+          in: query
+          schema: { type: integer }
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [system, interest]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: 话题列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TopicListItem' }
+          headers: { $ref: '#/components/headers/PaginationHeaders' }
+
+    post:
+      tags: [Topics]
+      summary: 创建话题
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content, node_id]
+              properties:
+                title: { type: string, minLength: 4, maxLength: 120 }
+                content: { type: string, minLength: 10 }
+                node_id: { type: integer }
+                is_repost: { type: boolean, default: false }
+                source_url: { type: string, format: uri }
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          slug: { type: string }
+                          title: { type: string }
+
+  /api/v1/topics/{id}:
+    get:
+      tags: [Topics]
+      summary: 话题详情
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: 话题详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 0 }
+                  data: { $ref: '#/components/schemas/TopicDetail' }
+
+    put:
+      tags: [Topics]
+      summary: 更新话题
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+                node_id: { type: integer }
+                is_repost: { type: boolean }
+                source_url: { type: string }
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+    delete:
+      tags: [Topics]
+      summary: 删除话题
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TopicId'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/topics/search:
+    get:
+      tags: [Topics]
+      summary: 搜索话题
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TopicListItem' }
+          headers: { $ref: '#/components/headers/PaginationHeaders' }
+
+  # ========== Comments ==========
+  /api/v1/topics/{topic_id}/comments:
+    get:
+      tags: [Comments]
+      summary: 评论列表（树形结构）
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: 评论列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/CommentTree' }
+          headers: { $ref: '#/components/headers/PaginationHeaders' }
+
+    post:
+      tags: [Comments]
+      summary: 创建评论
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, minLength: 2, maxLength: 2000 }
+                parent_id: { type: integer, description: 父评论 ID，为空则为根评论 }
+      responses:
+        '201':
+          description: 评论成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/CommentTree' }
+
+  /api/v1/topics/{topic_id}/comments/{id}:
+    delete:
+      tags: [Comments]
+      summary: 删除评论
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已删除
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/topics/{topic_id}/comments/{id}/toggle_login_only:
+    post:
+      tags: [Comments]
+      summary: 切换评论仅登录可见
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 切换成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          login_only: { type: boolean }
+
+  # ========== Interactions ==========
+  /api/v1/topics/{topic_id}/cool:
+    post:
+      tags: [Interactions]
+      summary: 话题点赞
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已点赞
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cools_count: { type: integer }
+
+    delete:
+      tags: [Interactions]
+      summary: 取消话题点赞
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已取消点赞
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cools_count: { type: integer }
+
+  /api/v1/comments/{comment_id}/cool:
+    post:
+      tags: [Interactions]
+      summary: 评论点赞
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已点赞
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cools_count: { type: integer }
+                          points: { type: integer }
+
+    delete:
+      tags: [Interactions]
+      summary: 取消评论点赞
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已取消点赞
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cools_count: { type: integer }
+                          points: { type: integer }
+
+  /api/v1/topics/{topic_id}/tips:
+    post:
+      tags: [Interactions]
+      summary: 打赏评论
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [comment_id, amount]
+              properties:
+                comment_id: { type: integer }
+                amount:
+                  type: integer
+                  enum: [10, 20, 30, 50, 100]
+      responses:
+        '200':
+          description: 打赏成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tip:
+                            type: object
+                            properties:
+                              id: { type: integer }
+                              amount: { type: integer }
+                              from_user: { $ref: '#/components/schemas/UserBrief' }
+                              to_user: { $ref: '#/components/schemas/UserBrief' }
+                          my_points: { type: integer }
+
+  # ========== Polls ==========
+  /api/v1/topics/{topic_id}/poll:
+    post:
+      tags: [Polls]
+      summary: 创建投票
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [poll]
+              properties:
+                poll:
+                  type: object
+                  required: [options]
+                  properties:
+                    options:
+                      type: array
+                      items: { type: string }
+                      minItems: 2
+                    closed:
+                      type: boolean
+                      default: false
+      responses:
+        '201':
+          description: 投票创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Poll' }
+
+    delete:
+      tags: [Polls]
+      summary: 删除投票
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: topic_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 投票已删除
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/polls/{poll_id}/vote:
+    post:
+      tags: [Polls]
+      summary: 投票
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: poll_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [poll_option_id]
+              properties:
+                poll_option_id: { type: integer }
+      responses:
+        '200':
+          description: 投票成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          poll: { $ref: '#/components/schemas/Poll' }
+
+  /api/v1/polls/{poll_id}/close:
+    post:
+      tags: [Polls]
+      summary: 关闭投票
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: poll_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 投票已关闭
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/polls/{poll_id}/open:
+    post:
+      tags: [Polls]
+      summary: 开启投票
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: poll_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 投票已开启
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  # ========== Users ==========
+  /api/v1/users/{id}:
+    get:
+      tags: [Users]
+      summary: 用户公开主页
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/UserPublicProfile' }
+
+  /api/v1/users/search:
+    get:
+      tags: [Users]
+      summary: 搜索用户
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/UserBrief' }
+
+  /api/v1/users/{id}/follow:
+    post:
+      tags: [Users]
+      summary: 关注用户
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已关注
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+    delete:
+      tags: [Users]
+      summary: 取消关注用户
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已取消关注
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/users/{id}/block:
+    post:
+      tags: [Users]
+      summary: 屏蔽用户
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已屏蔽
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+    delete:
+      tags: [Users]
+      summary: 取消屏蔽用户
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已取消屏蔽
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  # ========== Nodes ==========
+  /api/v1/nodes:
+    get:
+      tags: [Nodes]
+      summary: 节点列表
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [system, interest]
+      responses:
+        '200':
+          description: 节点列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/NodeItem' }
+
+  /api/v1/nodes/{id}/follow:
+    post:
+      tags: [Nodes]
+      summary: 关注节点
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已关注
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+    delete:
+      tags: [Nodes]
+      summary: 取消关注节点
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已取消关注
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  # ========== Profile ==========
+  /api/v1/profile:
+    get:
+      tags: [Profile]
+      summary: 获取当前用户信息
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: '#/components/schemas/UserFullProfile' }
+                          stats:
+                            type: object
+                            properties:
+                              topics_count: { type: integer }
+                              comments_count: { type: integer }
+                              followers_count: { type: integer }
+                              following_count: { type: integer }
+                              blocks_count: { type: integer }
+
+    patch:
+      tags: [Profile]
+      summary: 更新个人信息（用户名/头像）
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/profile/password:
+    patch:
+      tags: [Profile]
+      summary: 修改密码
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password, new_password_confirmation]
+              properties:
+                current_password: { type: string }
+                new_password: { type: string, minLength: 6 }
+                new_password_confirmation: { type: string }
+      responses:
+        '200':
+          description: 密码已修改
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  # ========== CheckIn ==========
+  /api/v1/check_in:
+    post:
+      tags: [CheckIn]
+      summary: 每日签到
+      description: 每日限一次，+10 酷能量
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 签到成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          points_earned: { type: integer, example: 10 }
+                          total_points: { type: integer }
+                          today_checked_in: { type: boolean }
+
+  # ========== Notifications ==========
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: 通知列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [all, unread]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: 通知列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/NotificationItem' }
+          headers: { $ref: '#/components/headers/PaginationHeaders' }
+
+  /api/v1/notifications/unread_count:
+    get:
+      tags: [Notifications]
+      summary: 未读通知数
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 未读数
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          unread_count: { type: integer }
+
+  /api/v1/notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: 标记通知已读
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 已标记为已读
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  /api/v1/notifications/read_all:
+    put:
+      tags: [Notifications]
+      summary: 全部标记为已读
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 已全部标记为已读
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaseResponse' }
+
+  # ========== Images ==========
+  /api/v1/images:
+    post:
+      tags: [Images]
+      summary: 上传图片
+      description: 支持 JPG/PNG/GIF/WebP，最大 5MB
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: integer }
+                          url: { type: string }
+
+  # ========== Misc ==========
+  /api/v1/chat_groups:
+    get:
+      tags: [Misc]
+      summary: 交流群列表
+      responses:
+        '200':
+          description: 交流群
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          enabled: { type: boolean }
+                          groups:
+                            type: object
+                            additionalProperties:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id: { type: integer }
+                                  name: { type: string }
+                                  description: { type: string }
+                                  members_count: { type: integer }
+
+  /api/v1/site_info:
+    get:
+      tags: [Misc]
+      summary: 站点公开信息
+      responses:
+        '200':
+          description: 站点信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/SiteInfo' }
+
+  /api/v1/friend_links:
+    get:
+      tags: [Misc]
+      summary: 友情链接
+      responses:
+        '200':
+          description: 友链列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+                            url: { type: string, format: uri }
+                            description: { type: string }
+                            logo: { type: string }
+                            sort_order: { type: integer }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token 认证
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema: { type: integer, default: 1, minimum: 1 }
+
+    PerPageParam:
+      name: per_page
+      in: query
+      schema: { type: integer, default: 20, minimum: 1, maximum: 50 }
+
+    TopicId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  headers:
+    PaginationHeaders:
+      X-Page:
+        description: 当前页码
+        schema: { type: integer }
+      X-Per-Page:
+        description: 每页条数
+        schema: { type: integer }
+      X-Total:
+        description: 总条数
+        schema: { type: integer }
+      X-Total-Pages:
+        description: 总页数
+        schema: { type: integer }
+
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        code: { type: integer, example: 0 }
+        message: { type: string, example: "success" }
+
+    ErrorResponse:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+
+    UserBrief:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        username: { type: string }
+        points: { type: integer }
+        role: { type: string, enum: [user, admin] }
+        avatar_url: { type: string, nullable: true }
+
+    NodeBrief:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+
+    TopicListItem:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        slug: { type: string }
+        excerpt: { type: string }
+        node: { $ref: '#/components/schemas/NodeBrief' }
+        author: { $ref: '#/components/schemas/UserBrief' }
+        comments_count: { type: integer }
+        cools_count: { type: integer }
+        views_count: { type: integer }
+        pinned: { type: boolean }
+        is_cooled: { type: boolean }
+        has_poll: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    PollOption:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        votes_count: { type: integer }
+        percentage: { type: number, format: float }
+        voted: { type: boolean }
+
+    Poll:
+      type: object
+      properties:
+        id: { type: integer }
+        closed: { type: boolean }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/PollOption' }
+
+    CommentTree:
+      type: object
+      properties:
+        id: { type: integer }
+        content: { type: string }
+        author: { $ref: '#/components/schemas/UserBrief' }
+        cools_count: { type: integer }
+        is_cooled: { type: boolean }
+        is_author: { type: boolean }
+        login_only: { type: boolean }
+        tips_total: { type: integer }
+        created_at: { type: string, format: date-time }
+        replies:
+          type: array
+          items: { $ref: '#/components/schemas/CommentTree' }
+
+    TopicDetail:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        slug: { type: string }
+        content: { type: string }
+        node: { $ref: '#/components/schemas/NodeBrief' }
+        author: { $ref: '#/components/schemas/UserBrief' }
+        comments_count: { type: integer }
+        cools_count: { type: integer }
+        views_count: { type: integer }
+        pinned: { type: boolean }
+        is_repost: { type: boolean }
+        source_url: { type: string, nullable: true }
+        is_cooled: { type: boolean }
+        is_author: { type: boolean }
+        has_poll: { type: boolean }
+        poll: { $ref: '#/components/schemas/Poll' }
+        comments:
+          type: array
+          items: { $ref: '#/components/schemas/CommentTree' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    UserPublicProfile:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        avatar_url: { type: string, nullable: true }
+        points: { type: integer }
+        topics_count: { type: integer }
+        comments_count: { type: integer }
+        followers_count: { type: integer }
+        following_count: { type: integer }
+        is_followed: { type: boolean }
+        is_blocked: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    UserFullProfile:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        username: { type: string }
+        avatar_url: { type: string, nullable: true }
+        points: { type: integer }
+        role: { type: string }
+        profile_public: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    NotificationItem:
+      type: object
+      properties:
+        id: { type: integer }
+        notify_type:
+          type: string
+          enum: [comment_cool, topic_cool, tip, new_comment, new_reply, new_follower, mention, topic_vote]
+        read: { type: boolean }
+        actor: { $ref: '#/components/schemas/UserBrief' }
+        notifiable:
+          type: object
+          properties:
+            type: { type: string }
+            id: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    NodeItem:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        kind: { type: string, enum: [system, interest] }
+        topics_count: { type: integer }
+        is_followed: { type: boolean }
+        position: { type: integer }
+
+    SiteInfo:
+      type: object
+      properties:
+        site_name: { type: string }
+        site_title: { type: string }
+        site_description: { type: string }
+        logo_url: { type: string, nullable: true }
+        favicon_url: { type: string, nullable: true }
+        stats:
+          type: object
+          properties:
+            users_count: { type: integer }
+            topics_count: { type: integer }
+            comments_count: { type: integer }
+        features:
+          type: object
+          properties:
+            registration_enabled: { type: boolean }
+            invitation_code_required: { type: boolean }
+            friend_links_enabled: { type: boolean }
+            chat_groups_enabled: { type: boolean }

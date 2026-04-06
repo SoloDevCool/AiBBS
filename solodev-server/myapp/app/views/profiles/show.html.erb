@@ -1,0 +1,330 @@
+<% content_for :title, "#{current_user.display_name} - 个人中心 - SoloDev.Cool" %>
+
+<div class="container-lg py-4">
+  <div class="row g-4">
+    <!-- 左栏 - 用户信息和统计数据 -->
+    <div class="col-lg-4">
+      <!-- 头像卡片 -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-4">
+          <div class="text-center mb-4">
+            <div class="position-relative d-inline-block">
+              <% if current_user.has_avatar? %>
+                <img src="<%= current_user.avatar_data_url %>" class="rounded-3" style="width:100px;height:100px;object-fit:cover" alt="头像">
+              <% else %>
+                <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center mx-auto" style="width:100px;height:100px;font-size:2.5rem">
+                  <i class="bi bi-person-fill"></i>
+                </div>
+              <% end %>
+              <label for="avatar_input" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:0.8rem;cursor:pointer" title="更换头像">
+                <i class="bi bi-camera-fill"></i>
+              </label>
+              <%= form_with url: profile_path, method: :patch, local: true, multipart: true, class: "d-none" do |f| %>
+                <input type="hidden" name="section" value="avatar">
+                <%= f.file_field :avatar, name: "user[avatar]", id: "avatar_input", accept: "image/*",
+                    onchange: "this.closest('form').requestSubmit()", style: "display:none" %>
+              <% end %>
+            </div>
+            <h4 class="mt-3 mb-1 fw-bold"><%= current_user.display_name %></h4>
+            <div class="text-muted small mb-2"><%= current_user.email %></div>
+            <span class="badge <%= current_user.admin? ? 'bg-warning text-dark' : 'bg-info' %> rounded-pill">
+              <%= current_user.role_label %>
+            </span>
+          </div>
+
+          <div class="row g-2 text-center mb-3">
+            <div class="col-6">
+              <a href="<%= profile_path(tab: 'topics') %>" class="text-decoration-none">
+                <div class="fs-5 fw-bold <%= @tab == 'topics' ? 'text-primary' : 'text-dark' %>"><%= current_user.topics.count %></div>
+                <div class="text-muted small">主题</div>
+              </a>
+            </div>
+            <div class="col-6">
+              <a href="<%= profile_path(tab: 'following') %>" class="text-decoration-none">
+                <div class="fs-5 fw-bold <%= @tab == 'following' ? 'text-primary' : 'text-dark' %>"><%= current_user.following.count %></div>
+                <div class="text-muted small">已关注</div>
+              </a>
+            </div>
+            <div class="col-6">
+              <a href="<%= profile_path(tab: 'followers') %>" class="text-decoration-none">
+                <div class="fs-5 fw-bold <%= @tab == 'followers' ? 'text-primary' : 'text-dark' %>"><%= current_user.followers.count %></div>
+                <div class="text-muted small">粉丝</div>
+              </a>
+            </div>
+            <div class="col-6">
+              <a href="<%= profile_path(tab: 'blocked') %>" class="text-decoration-none">
+                <div class="fs-5 fw-bold <%= @tab == 'blocked' ? 'text-danger' : 'text-dark' %>"><%= current_user.blocked_users.count %></div>
+                <div class="text-muted small">已屏蔽</div>
+              </a>
+            </div>
+          </div>
+
+          <div class="text-center py-2 px-3 bg-light rounded-3 mb-3">
+            <div class="fs-5 fw-bold text-dark"><%= current_user.points %></div>
+            <div class="text-muted small">酷能量</div>
+          </div>
+
+          <div class="text-center">
+            <% if current_user.check_ins.exists?(checked_on: Date.current) %>
+              <span class="d-inline-flex align-items-center text-muted" style="font-size:0.85rem">
+                <i class="bi bi-check-circle me-1 text-success"></i>今日已签到
+              </span>
+            <% else %>
+              <%= button_to check_in_path, method: :post, form: { data: { turbo: false } }, class: "btn btn-primary rounded-pill px-4" do %>
+                <i class="bi bi-calendar-check me-1"></i>每日签到
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <!-- 隐私设置 -->
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-eye-slash me-2 text-secondary"></i>隐私设置</h6>
+        </div>
+        <div class="card-body p-4">
+          <%= form_with url: profile_path, method: :patch, local: true do |f| %>
+            <input type="hidden" name="section" value="privacy">
+            <input type="hidden" name="user[profile_public]" value="0">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="profilePublicSwitch"
+                name="user[profile_public]" value="1" <%= current_user.profile_public? ? "checked" : "" %>
+                onchange="this.closest('form').requestSubmit()">
+              <label class="form-check-label fw-semibold" for="profilePublicSwitch" style="font-size:0.9rem">
+                公开我的主页
+              </label>
+              <div class="text-muted mt-1" style="font-size:0.8rem">
+                关闭后，其他用户将无法查看你的个人主页，主题详情页中你的用户名也不可点击
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右栏 - 功能设置和内容 -->
+    <div class="col-lg-8">
+
+      <% if @tab == "following" || @tab == "followers" || @tab == "blocked" %>
+        <!-- 关注/粉丝列表 -->
+        <div class="card border-0 shadow-sm rounded-3">
+          <div class="card-header bg-white border-bottom py-3 px-4">
+            <h6 class="mb-0 fw-bold">
+              <i class="bi <%= @tab == 'following' ? 'bi-people' : @tab == 'blocked' ? 'bi-slash-circle' : 'bi-person-heart' %> me-2 <%= @tab == 'blocked' ? 'text-danger' : 'text-primary' %>"></i>
+              <%= @tab == 'following' ? '已关注' : @tab == 'blocked' ? '已屏蔽' : '我的粉丝' %>
+              <span class="text-muted fw-normal ms-1" style="font-size:0.8rem">共 <%= @tab == 'following' ? current_user.following.count : @tab == 'blocked' ? current_user.blocked_users.count : current_user.followers.count %> 人</span>
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            <% @users.each do |user| %>
+              <div class="d-flex align-items-center p-3 border-bottom">
+                <% if user.has_avatar? %>
+                  <img src="<%= user.avatar_data_url %>" class="rounded-3 me-3 flex-shrink-0" style="width:40px;height:40px;object-fit:cover" alt="">
+                <% else %>
+                  <div class="rounded-3 bg-avatar-<%= user.id % 5 + 1 %> me-3 flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold" style="width:40px;height:40px;font-size:0.9rem">
+                    <%= user_initial(user) %>
+                  </div>
+                <% end %>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-dark"><%= user.display_name %></div>
+                  <div class="text-muted" style="font-size:0.78rem">
+                    <span class="badge <%= user.admin? ? 'bg-warning text-dark' : 'bg-light text-secondary' %> rounded-pill" style="font-size:0.65rem"><%= user.role_label %></span>
+                    <span class="ms-1"><%= user.topics.count %> 主题</span>
+                  </div>
+                </div>
+                <div class="flex-shrink-0 ms-2">
+                  <% if @tab == "blocked" %>
+                    <%= button_to unblock_user_path(user), method: :delete, form: { data: { turbo: false } }, class: "btn btn-sm btn-outline-danger rounded-pill px-3" do %>
+                      <i class="bi bi-unlock me-1"></i>取消屏蔽
+                    <% end %>
+                  <% else %>
+                    <% if current_user.following.include?(user) %>
+                      <%= button_to unfollow_user_path(user), method: :delete, form: { data: { turbo: false } }, class: "btn btn-sm btn-outline-secondary rounded-pill px-3" do %>
+                        <i class="bi bi-check-lg me-1"></i>已关注
+                      <% end %>
+                    <% else %>
+                      <%= button_to follow_user_path(user), method: :post, form: { data: { turbo: false } }, class: "btn btn-sm btn-outline-primary rounded-pill px-3" do %>
+                        <i class="bi bi-plus me-1"></i>关注
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            <% if @users.empty? %>
+              <div class="text-center text-muted py-4">
+                <i class="bi <%= @tab == 'following' ? 'bi-people' : 'bi-person-heart' %> d-block mb-1" style="font-size:1.5rem"></i>
+                <small><%= @tab == 'following' ? '还没有关注任何人' : @tab == 'blocked' ? '没有屏蔽任何用户' : '还没有粉丝' %></small>
+              </div>
+            <% end %>
+          </div>
+          <!-- 分页 -->
+          <% if @pagy.last > 1 %>
+            <div class="d-flex justify-content-center py-3 border-top">
+              <nav>
+                <ul class="pagination pagination-sm mb-0">
+                  <% if @pagy.previous %>
+                    <li class="page-item"><%= link_to raw('<i class="bi bi-chevron-left"></i>'), profile_path(tab: @tab, page: @pagy.previous), class: "page-link" %></li>
+                  <% end %>
+                  <% @pagy.series.each do |item| %>
+                    <% if item.is_a?(Integer) %>
+                      <li class="page-item <%= item == @pagy.page ? 'active' : '' %>">
+                        <%= link_to item, profile_path(tab: @tab, page: item), class: "page-link" %>
+                      </li>
+                    <% elsif item == :gap %>
+                      <li class="page-item disabled"><span class="page-link">...</span></li>
+                    <% end %>
+                  <% end %>
+                  <% if @pagy.next %>
+                    <li class="page-item"><%= link_to raw('<i class="bi bi-chevron-right"></i>'), profile_path(tab: @tab, page: @pagy.next), class: "page-link" %></li>
+                  <% end %>
+                </ul>
+              </nav>
+            </div>
+          <% end %>
+        </div>
+
+      <% else %>
+
+      <!-- 修改用户名 -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-person me-2 text-primary"></i>修改用户名</h6>
+        </div>
+        <div class="card-body p-4">
+          <%= form_with url: profile_path, method: :patch, local: true, class: "needs-validation" do |f| %>
+            <input type="hidden" name="section" value="username">
+
+            <% if @username_error && current_user.errors.any? %>
+              <div class="alert alert-danger rounded-3 py-2 mb-3">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                <ul class="mb-0 ms-3">
+                  <% current_user.errors.full_messages.each do |msg| %>
+                    <li><%= msg %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small text-muted">当前用户名</label>
+              <div class="input-group">
+                <span class="input-group-text">@</span>
+                <input type="text" class="form-control rounded-3" value="<%= current_user.username %>" disabled>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="usernameInput" class="form-label fw-semibold small text-muted">新用户名</label>
+              <div class="input-group">
+                <span class="input-group-text">@</span>
+                <input type="text" name="user[username]" id="usernameInput" class="form-control rounded-3 <%= @username_error && current_user.errors[:username].any? ? 'is-invalid' : '' %>"
+                  placeholder="2-20个字符，支持字母、数字、下划线和中文"
+                  value="<%= @username_error && params[:user]&.dig(:username) ? params[:user][:username] : '' %>"
+                  pattern="[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}" required>
+              </div>
+              <div class="form-text">用户名可以包含字母、数字、下划线和中文，长度为 2-20 个字符</div>
+              <div class="form-text text-info"><i class="bi bi-info-circle me-1"></i>用户名修改后，之前的@提及链接将失效</div>
+            </div>
+
+            <div class="text-end">
+              <button type="submit" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-check-lg me-1"></i>更新用户名
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- 修改密码 -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-warning"></i>修改密码</h6>
+        </div>
+        <div class="card-body p-4">
+          <%= form_with url: profile_path, method: :patch, local: true, class: "needs-validation" do |f| %>
+            <input type="hidden" name="section" value="password">
+
+            <% if @password_error && current_user.errors.any? %>
+              <div class="alert alert-danger rounded-3 py-2 mb-3">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                <ul class="mb-0 ms-3">
+                  <% current_user.errors.full_messages.each do |msg| %>
+                    <li><%= msg %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small text-muted">当前密码</label>
+                <input type="password" name="user[current_password]" class="form-control rounded-3 <%= @password_error && current_user.errors[:current_password].any? ? 'is-invalid' : '' %>" placeholder="输入当前密码" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small text-muted">新密码</label>
+                <input type="password" name="user[password]" class="form-control rounded-3 <%= @password_error && current_user.errors[:password].any? ? 'is-invalid' : '' %>" placeholder="至少6位" required>
+                <div class="form-text">至少 6 个字符</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold small text-muted">确认新密码</label>
+                <input type="password" name="user[password_confirmation]" class="form-control rounded-3" placeholder="再次输入新密码" required>
+              </div>
+            </div>
+            <div class="mt-3 text-end">
+              <button type="submit" class="btn btn-warning rounded-pill px-4">
+                <i class="bi bi-check-lg me-1"></i>更新密码
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- 我的主题 -->
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-chat-square-text me-2 text-primary"></i>我的主题</h6>
+        </div>
+        <div class="card-body p-0">
+          <% @topics.each do |topic| %>
+            <div class="d-flex align-items-center p-3 border-bottom">
+              <div class="flex-grow-1 min-w-0">
+                <%= link_to topic, class: "text-dark text-decoration-none fw-semibold d-block" do %>
+                  <%= topic.title %>
+                <% end %>
+                <div class="text-muted" style="font-size:0.78rem">
+                  <span class="badge bg-opacity-10 text-secondary rounded-pill" style="font-size:0.72rem">
+                    <%= topic.node.icon %> <%= topic.node.name %>
+                  </span>
+                  <span class="ms-1"><%= time_ago_in_words(topic.created_at) %>前</span>
+                  <span class="ms-1"><i class="bi bi-eye me-1"></i><%= topic.views_count %></span>
+                </div>
+              </div>
+              <div class="flex-shrink-0 ms-2 d-flex gap-1">
+              <% if can_manage_topic?(topic) %>
+                <%= link_to edit_topic_path(topic), class: "btn btn-sm btn-outline-secondary rounded-pill px-2" do %>
+                  <i class="bi bi-pencil"></i>
+                <% end %>
+                <%= button_to topic, method: :delete, class: "btn btn-sm btn-outline-danger rounded-pill px-2",
+                    data: { confirm: "确定删除？" } do %>
+                  <i class="bi bi-trash"></i>
+                <% end %>
+              <% end %>
+              </div>
+            </div>
+          <% end %>
+          <% if @topics.empty? %>
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-chat-square-text d-block mb-1" style="font-size:1.5rem"></i>
+              <small>还没有发布过主题</small>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <% end %>
+
+    </div>
+  </div>
+</div>

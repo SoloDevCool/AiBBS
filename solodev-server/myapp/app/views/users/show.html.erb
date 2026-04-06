@@ -1,0 +1,146 @@
+<% content_for :title, "#{@user.display_name} - SoloDev.Cool" %>
+<% content_for :head do %>
+  <%= seo_meta_tags(title: "#{@user.display_name} - SoloDev.Cool", description: "#{@user.display_name} 的个人主页", url: user_url(@user)) %>
+  <%= json_ld_breadcrumb([{ name: "首页", url: root_url }, { name: @user.display_name, url: user_url(@user) }]) %>
+  <%= json_ld_person(@user) %>
+<% end %>
+
+<div class="container-lg py-3">
+  <div class="row g-3 justify-content-center">
+
+    <div class="col-lg-8">
+      <div class="bg-white rounded shadow-sm overflow-hidden">
+
+        <!-- 用户信息卡片 -->
+        <div class="user-profile-header">
+          <div class="d-flex align-items-center gap-3 px-4 pt-4 pb-3">
+            <% if @user.has_avatar? %>
+              <div class="user-profile-avatar overflow-hidden">
+                <img src="<%= @user.avatar_data_url %>" class="w-100 h-100" style="object-fit:cover" alt="">
+              </div>
+            <% else %>
+              <div class="user-profile-avatar bg-avatar-<%= @user.id % 5 + 1 %> d-flex align-items-center justify-content-center">
+                <%= user_initial(@user) %>
+              </div>
+            <% end %>
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0 fw-bold"><%= @user.display_name %></h5>
+                <span class="badge <%= @user.admin? ? 'bg-warning text-dark' : 'bg-info' %> rounded-pill" style="font-size:0.68rem">
+                  <%= @user.role_label %>
+                </span>
+              </div>
+              <div class="text-muted mt-1" style="font-size:0.82rem">
+                <i class="bi bi-calendar3 me-1"></i><%= @user.created_at.strftime("%Y-%m-%d") %> 加入
+              </div>
+            </div>
+            <% if user_signed_in? && current_user != @user %>
+              <div class="d-flex gap-2 flex-shrink-0">
+                <% if @user.blocked?(current_user) %>
+                  <%= button_to unblock_user_path(@user), method: :delete, class: "btn btn-sm btn-outline-secondary rounded-pill px-3" do %>
+                    <i class="bi bi-unlock me-1"></i>取消屏蔽
+                  <% end %>
+                <% else %>
+                  <% if @user.followed_by?(current_user) %>
+                    <%= button_to unfollow_user_path(@user), method: :delete, class: "btn btn-sm btn-outline-secondary rounded-pill px-3" do %>
+                      <i class="bi bi-person-check me-1"></i>已关注
+                    <% end %>
+                  <% else %>
+                    <%= button_to follow_user_path(@user), method: :post, class: "btn btn-sm btn-primary rounded-pill px-3" do %>
+                      <i class="bi bi-person-plus me-1"></i>关注
+                    <% end %>
+                  <% end %>
+                  <%= button_to block_user_path(@user), method: :post, class: "btn btn-sm btn-outline-danger rounded-pill px-3",
+                      data: { confirm: "屏蔽后该用户发布的主题将不再显示，确定屏蔽吗？" } do %>
+                    <i class="bi bi-slash-circle me-1"></i>屏蔽
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+
+          <!-- 统计数据 -->
+          <div class="d-flex px-4 pb-3 gap-4" style="border-bottom:1px solid var(--border-color)">
+            <div>
+              <span class="fw-bold"><%= @user.topics.count %></span>
+              <span class="text-muted ms-1" style="font-size:0.82rem">主题</span>
+            </div>
+            <div>
+              <span class="fw-bold"><%= @user.followers.count %></span>
+              <span class="text-muted ms-1" style="font-size:0.82rem">粉丝</span>
+            </div>
+            <div>
+              <span class="fw-bold"><%= @user.following.count %></span>
+              <span class="text-muted ms-1" style="font-size:0.82rem">关注</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 主题列表 -->
+        <div class="d-flex align-items-center px-4 py-2" style="border-bottom:1px solid var(--border-color)">
+          <i class="bi bi-journal-text me-2 text-muted"></i>
+          <h6 class="mb-0 fw-bold" style="font-size:0.88rem">发布的主题</h6>
+          <span class="text-muted ms-1" style="font-size:0.78rem">(<%= @user.topics.count %>)</span>
+        </div>
+
+        <div class="topic-list">
+          <% if @topics.any? %>
+            <% @topics.each do |topic| %>
+              <%= link_to topic_path(topic), class: "topic-item" do %>
+                <div class="topic-avatar bg-avatar-<%= topic.user.id % 5 + 1 %>">
+                  <% if topic.user.has_avatar? %>
+                    <img src="<%= topic.user.avatar_data_url %>" class="rounded-3 w-100 h-100" style="object-fit:cover" alt="">
+                  <% else %>
+                    <%= user_initial(topic.user) %>
+                  <% end %>
+                </div>
+                <div class="topic-body">
+                  <div class="topic-title"><%= topic.title %></div>
+                  <div class="topic-meta">
+                    <span class="badge-node me-1"><%= topic.node.icon %> <%= topic.node.name %></span>
+                    <span><i class="bi bi-eye me-1"></i><%= topic.views_count %></span>
+                    <span class="ms-2"><i class="bi bi-chat-dots me-1"></i><%= topic.comments.count %></span>
+                    <span class="ms-2"><i class="bi bi-snow me-1"></i><%= topic.cools_count %></span>
+                    <span class="ms-2"><%= time_ago_in_words(topic.created_at) %>前</span>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+          <% else %>
+            <div class="text-center text-muted py-5" style="font-size:0.85rem">
+              <i class="bi bi-journal-x d-block mb-2" style="font-size:1.5rem"></i>
+              该用户暂未发布任何主题
+            </div>
+          <% end %>
+        </div>
+
+        <!-- 分页 -->
+        <% if @pagy.pages > 1 %>
+          <div class="d-flex justify-content-center py-3">
+            <%== pagy_nav(@pagy) %>
+          </div>
+        <% end %>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.user-profile-header {
+  background: var(--bg-card);
+}
+.user-profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 0.75rem;
+  background: var(--bg-card);
+  flex-shrink: 0;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.3rem;
+  border: 3px solid var(--bg-card);
+  box-shadow: 0 2px 8px var(--shadow-avatar);
+}
+</style>

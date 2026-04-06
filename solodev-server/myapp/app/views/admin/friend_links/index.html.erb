@@ -1,0 +1,195 @@
+<h4 class="mb-4 text-dark fw-bold">友情链接管理</h4>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <!-- 友链列表 -->
+    <div class="card card-admin mb-4">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-link-45deg me-2 text-primary"></i>友链列表</h6>
+        <span class="badge bg-primary"><%= @friend_links.size %> 个链接</span>
+      </div>
+      <div class="card-body p-0">
+        <% if @friend_links.any? %>
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th style="width:5%">排序</th>
+                <th style="width:20%">名称</th>
+                <th style="width:25%">URL</th>
+                <th>描述</th>
+                <th style="width:8%">状态</th>
+                <th style="width:10%">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @friend_links.each do |link| %>
+                <tr id="friend_link_<%= link.id %>">
+                  <td class="text-muted small"><%= link.sort_order %></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <% if link.logo.present? %>
+                        <img src="<%= link.logo %>" alt="" style="width:24px;height:24px;border-radius:4px;object-fit:cover;margin-right:8px;">
+                      <% end %>
+                      <span class="fw-semibold"><%= link.name %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <a href="<%= link.url %>" target="_blank" class="text-truncate d-block" style="max-width:200px;font-size:0.85rem"><%= link.url %></a>
+                  </td>
+                  <td class="text-muted small"><%= truncate(link.description, length: 40) if link.description.present? %></td>
+                  <td>
+                    <% if link.is_active? %>
+                      <span class="badge bg-success-subtle text-success">启用</span>
+                    <% else %>
+                      <span class="badge bg-secondary-subtle text-secondary">禁用</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <button type="button" class="btn btn-sm btn-outline-primary btn-action" data-bs-toggle="modal" data-bs-target="#editModal_<%= link.id %>" title="编辑">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <%= button_to admin_friend_link_path(link), method: :delete, class: "btn btn-sm btn-outline-danger btn-action", title: "删除", data: { turbo_confirm: "确定删除「#{link.name}」？" } do %>
+                        <i class="bi bi-trash"></i>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-link-45deg d-block fs-1 mb-2"></i>
+            <p>暂无友情链接，请在右侧添加</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <!-- 添加友链 -->
+    <div class="card card-admin mb-4">
+      <div class="card-header py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2 text-success"></i>添加友链</h6>
+      </div>
+      <div class="card-body">
+        <%= form_with model: [:admin, FriendLink.new], url: admin_friend_links_path, class: "needs-validation" do |f| %>
+          <div class="mb-3">
+            <%= f.label :name, "网站名称", class: "form-label fw-semibold small" %>
+            <%= f.text_field :name, class: "form-control form-control-sm", placeholder: "例如：Ruby China", required: true %>
+          </div>
+          <div class="mb-3">
+            <%= f.label :url, "网站地址", class: "form-label fw-semibold small" %>
+            <%= f.url_field :url, class: "form-control form-control-sm", placeholder: "https://example.com", required: true %>
+          </div>
+          <div class="mb-3">
+            <%= f.label :description, "网站描述", class: "form-label fw-semibold small" %>
+            <%= f.text_field :description, class: "form-control form-control-sm", placeholder: "一句话描述（可选）" %>
+          </div>
+          <div class="mb-3">
+            <%= f.label :logo, "Logo 地址", class: "form-label fw-semibold small" %>
+            <%= f.url_field :logo, class: "form-control form-control-sm", placeholder: "https://example.com/logo.png（可选）" %>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <%= f.label :sort_order, "排序", class: "form-label fw-semibold small" %>
+              <%= f.number_field :sort_order, class: "form-control form-control-sm", value: 0, min: 0 %>
+            </div>
+            <div class="col-6">
+              <%= f.label :is_active, "状态", class: "form-label fw-semibold small" %>
+              <select name="friend_link[is_active]" class="form-select form-select-sm">
+                <option value="true" selected>启用</option>
+                <option value="false">禁用</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary rounded-pill w-100">
+            <i class="bi bi-plus-lg me-1"></i>添加友链
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- 页脚文字配置 -->
+    <div class="card card-admin mb-4">
+      <div class="card-header py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-type me-2 text-info"></i>页脚文字</h6>
+      </div>
+      <div class="card-body">
+        <%= form_with url: settings_admin_friend_links_path, method: :patch, class: "needs-validation" do |f| %>
+          <p class="text-muted small mb-3">自定义底部页脚显示的文字信息，留空则显示默认文字。</p>
+          <div class="mb-3">
+            <%= label_tag :footer_text, "页脚文字", class: "form-label fw-semibold small" %>
+            <%= text_area_tag :footer_text, SiteSetting.get("footer_text"), class: "form-control form-control-sm", rows: 2, placeholder: "例如：SoloDev.Cool 独立开发者社区 © 2026" %>
+            <div class="form-text">支持 HTML，例如 &lt;a&gt; 标签</div>
+          </div>
+          <div class="mb-3">
+            <%= label_tag :friend_links_enabled, "显示友链区域", class: "form-label fw-semibold small" %>
+            <select name="friend_links_enabled" class="form-select form-select-sm">
+              <option value="true" <%= "selected" if SiteSetting.get("friend_links_enabled") != "false" %>>显示</option>
+              <option value="false" <%= "selected" if SiteSetting.get("friend_links_enabled") == "false" %>>隐藏</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-info text-white rounded-pill w-100">
+            <i class="bi bi-check-lg me-1"></i>保存设置
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑弹窗 -->
+<% @friend_links.each do |link| %>
+  <div class="modal fade" id="editModal_<%= link.id %>" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title fw-bold">编辑友链</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <%= form_with model: [:admin, link], url: admin_friend_link_path(link), method: :patch do |f| %>
+            <div class="mb-3">
+              <%= f.label :name, "网站名称", class: "form-label fw-semibold small" %>
+              <%= f.text_field :name, class: "form-control form-control-sm", required: true %>
+            </div>
+            <div class="mb-3">
+              <%= f.label :url, "网站地址", class: "form-label fw-semibold small" %>
+              <%= f.url_field :url, class: "form-control form-control-sm", required: true %>
+            </div>
+            <div class="mb-3">
+              <%= f.label :description, "网站描述", class: "form-label fw-semibold small" %>
+              <%= f.text_field :description, class: "form-control form-control-sm" %>
+            </div>
+            <div class="mb-3">
+              <%= f.label :logo, "Logo 地址", class: "form-label fw-semibold small" %>
+              <%= f.url_field :logo, class: "form-control form-control-sm" %>
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <%= f.label :sort_order, "排序", class: "form-label fw-semibold small" %>
+                <%= f.number_field :sort_order, class: "form-control form-control-sm", min: 0 %>
+              </div>
+              <div class="col-6">
+                <%= f.label :is_active, "状态", class: "form-label fw-semibold small" %>
+                <select name="friend_link[is_active]" class="form-select form-select-sm">
+                  <option value="true" <%= "selected" if link.is_active? %>>启用</option>
+                  <option value="false" <%= "selected" unless link.is_active? %>>禁用</option>
+                </select>
+              </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">取消</button>
+              <button type="submit" class="btn btn-primary rounded-pill">
+                <i class="bi bi-check-lg me-1"></i>保存
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

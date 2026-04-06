@@ -1,0 +1,164 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="text-dark fw-bold mb-0">运营账号管理</h4>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="badge bg-primary rounded-pill px-3 py-2"><%= User.where(is_operational: true).count %> 个账号</span>
+    <%= link_to export_admin_operational_accounts_path(format: :xlsx), class: "btn btn-sm btn-outline-success rounded-pill px-3" do %>
+      <i class="bi bi-file-earmark-excel me-1"></i>导出 Excel
+    <% end %>
+  </div>
+</div>
+
+<!-- 批量生成 -->
+<div class="card card-admin mb-4">
+  <div class="card-body">
+    <form id="batchForm" class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label fw-semibold small mb-1">生成数量</label>
+        <input type="number" name="count" value="10" min="1" max="100" class="form-control form-control-sm" required>
+      </div>
+      <div class="col-auto">
+        <label class="form-label fw-semibold small mb-1">邮箱域名</label>
+        <div class="input-group input-group-sm">
+          <input type="text" name="email_domain" value="solodev.cool" class="form-control" placeholder="example.com" required>
+          <span class="input-group-text">@后缀</span>
+        </div>
+      </div>
+      <div class="col-auto">
+        <label class="form-label fw-semibold small mb-1">统一密码</label>
+        <input type="text" name="password" value="123456" class="form-control form-control-sm" placeholder="至少6个字符" required>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm rounded-pill" data-confirm="确定要批量生成运营账号吗？">
+          <i class="bi bi-plus-lg me-1"></i>生成
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 账号列表 -->
+<div class="card card-admin">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">#</th>
+            <th>用户名</th>
+            <th>邮箱</th>
+            <th>密码</th>
+            <th class="d-none d-md-table-cell">角色</th>
+            <th class="d-none d-lg-table-cell">创建时间</th>
+            <th class="pe-3 text-end">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @users.each_with_index do |user, index| %>
+            <tr id="op-account-<%= user.id %>">
+              <td class="ps-3 text-muted"><%= @pagy.offset + index + 1 %></td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:32px;height:32px;font-size:0.85rem">
+                    <i class="bi bi-person-badge-fill"></i>
+                  </div>
+                  <span><%= user.username %></span>
+                </div>
+              </td>
+              <td>
+                <code class="small bg-light rounded px-1"><%= user.email %></code>
+                <button class="btn btn-link btn-sm p-0 ms-1 text-decoration-none" onclick="copyText('<%= user.email %>', this)" title="复制邮箱">
+                  <i class="bi bi-clipboard small"></i>
+                </button>
+              </td>
+              <td>
+                <% if user.plaintext_password.present? %>
+                  <code class="small bg-light rounded px-1"><%= user.plaintext_password %></code>
+                  <button class="btn btn-link btn-sm p-0 ms-1 text-decoration-none" onclick="copyText('<%= user.plaintext_password %>', this)" title="复制密码">
+                    <i class="bi bi-clipboard small"></i>
+                  </button>
+                <% else %>
+                  <span class="text-muted small">未记录</span>
+                <% end %>
+              </td>
+              <td class="d-none d-md-table-cell">
+                <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill"><%= user.role_label %></span>
+              </td>
+              <td class="d-none d-lg-table-cell text-muted"><small><%= user.created_at.strftime("%Y-%m-%d %H:%M") %></small></td>
+              <td class="pe-3 text-end">
+                <button class="btn btn-link btn-sm p-0 text-decoration-none" onclick="copyAccount('<%= user.email %>', '<%= user.plaintext_password %>', this)" title="复制账号密码">
+                  <i class="bi bi-clipboard-data small text-primary"></i>
+                </button>
+                <%= button_to admin_operational_account_path(user), method: :delete,
+                    class: "btn btn-link btn-sm p-0 text-decoration-none",
+                    data: { confirm: "确定要删除运营账号 #{user.email} 吗？" } do %>
+                  <i class="bi bi-trash small text-danger"></i>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+          <% if @users.empty? %>
+            <tr>
+              <td colspan="7" class="text-center text-muted py-5">暂无运营账号</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<% if @pagy.last > 1 %>
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center mb-0">
+      <% if @pagy.previous %>
+        <li class="page-item">
+          <%= link_to raw('<i class="bi bi-chevron-left"></i>'), admin_operational_accounts_path(page: @pagy.previous), class: "page-link rounded" %>
+        </li>
+      <% end %>
+      <% @pagy.series.each do |item| %>
+        <% if item.is_a?(Integer) %>
+          <li class="page-item <%= item == @pagy.page ? 'active' : '' %>">
+            <%= link_to item, admin_operational_accounts_path(page: item), class: "page-link rounded" %>
+          </li>
+        <% elsif item == :gap %>
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        <% end %>
+      <% end %>
+      <% if @pagy.next %>
+        <li class="page-item">
+          <%= link_to raw('<i class="bi bi-chevron-right"></i>'), admin_operational_accounts_path(page: @pagy.next), class: "page-link rounded" %>
+        </li>
+      <% end %>
+    </ul>
+  </nav>
+<% end %>
+
+<script>
+  document.getElementById('batchForm').action = '<%= batch_generate_admin_operational_accounts_path %>';
+  document.getElementById('batchForm').method = 'post';
+  // Rails UJS token
+  var token = document.querySelector('meta[name="csrf-token"]');
+  if (token) {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'authenticity_token';
+    input.value = token.getAttribute('content');
+    document.getElementById('batchForm').appendChild(input);
+  }
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(function() {
+      var icon = btn.querySelector('i');
+      icon.className = 'bi bi-check-lg small text-success';
+      setTimeout(function() { icon.className = 'bi bi-clipboard small'; }, 1500);
+    });
+  }
+
+  function copyAccount(email, password, btn) {
+    navigator.clipboard.writeText(email + ' ' + password).then(function() {
+      var icon = btn.querySelector('i');
+      icon.className = 'bi bi-check-lg small text-success';
+      setTimeout(function() { icon.className = 'bi bi-clipboard-data small text-primary'; }, 1500);
+    });
+  }
+</script>

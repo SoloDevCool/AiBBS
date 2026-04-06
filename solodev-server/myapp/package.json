@@ -1,0 +1,8 @@
+{
+  "name": "myapp",
+  "private": true,
+  "scripts": {
+    "build": "echo 'No JavaScript to build'"
+  },
+  "dependencies": {}
+}

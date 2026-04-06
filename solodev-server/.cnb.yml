@@ -1,0 +1,48 @@
+$:
+  vscode:
+    - docker:
+        build:
+          dockerfile: .ide/Dockerfile
+          by:
+            - .ide/create_languagepacks
+      services:
+        - vscode
+        - docker
+
+main:
+  push:
+    - docker:
+        # 声明使用项目中的 Dockerfile 来构建环境镜像
+        build:
+          dockerfile: /myapp/Dockerfile
+          by:
+            - myapp/Gemfile
+            - myapp/Gemfile.lock
+            - myapp/package.json
+            - myapp/vendor
+            - myapp/app
+            - myapp/bin
+            - myapp/config
+            - myapp/config.ru
+            - myapp/db
+            - myapp/lib
+            - myapp/public
+            - myapp/Rakefile
+      stages:
+        # 下面的脚本任务将在自定义构建的环境中运行
+        - ruby -v
+
+    - name: push-docker-image
+      services:
+        - docker
+      stages:
+        - name: set docker tag
+          script: echo -n "${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest"
+          exports:
+            info: IMAGE_TAG
+
+        - name: docker build
+          script: docker build -f myapp/Dockerfile -t $IMAGE_TAG .
+
+        - name: push image
+          script: docker push $IMAGE_TAG 

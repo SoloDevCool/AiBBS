@@ -1,0 +1,174 @@
+<h4 class="mb-4 text-dark fw-bold">系统设置</h4>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <%= form_with url: admin_settings_path, method: :patch, scope: :settings, class: "needs-validation" do |f| %>
+
+      <!-- GitHub OAuth -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-github me-2 text-dark"></i>GitHub OAuth 登录</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">启用后，用户可以通过 GitHub 账号登录。请前往 <a href="https://github.com/settings/developers" target="_blank">GitHub Developer Settings</a> 创建 OAuth App，回调地址填写：<code class="bg-light px-2 py-1 rounded"><%= "#{request.base_url}/users/auth/github/callback" %></code></p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= f.label :github_client_id, "Client ID", class: "form-label fw-semibold small" %>
+              <%= f.text_field :github_client_id, value: @settings[:github_client_id], class: "form-control form-control-sm", placeholder: "请输入 Client ID" %>
+            </div>
+            <div class="col-md-6">
+              <%= f.label :github_client_secret, "Client Secret", class: "form-label fw-semibold small" %>
+              <%= f.text_field :github_client_secret, value: @settings[:github_client_secret], class: "form-control form-control-sm", placeholder: "请输入 Client Secret" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Google OAuth -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-google me-2 text-danger"></i>Google OAuth 登录</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">启用后，用户可以通过 Google 账号登录。请前往 <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> 创建 OAuth 2.0 客户端 ID，已授权的重定向 URI 填写：<code class="bg-light px-2 py-1 rounded"><%= "#{request.base_url}/users/auth/google_oauth2/callback" %></code></p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= f.label :google_client_id, "Client ID", class: "form-label fw-semibold small" %>
+              <%= f.text_field :google_client_id, value: @settings[:google_client_id], class: "form-control form-control-sm", placeholder: "请输入 Client ID" %>
+            </div>
+            <div class="col-md-6">
+              <%= f.label :google_client_secret, "Client Secret", class: "form-label fw-semibold small" %>
+              <%= f.text_field :google_client_secret, value: @settings[:google_client_secret], class: "form-control form-control-sm", placeholder: "请输入 Client Secret" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gitee OAuth -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-git me-2 text-danger"></i>Gitee OAuth 登录</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">启用后，用户可以通过 Gitee 账号登录。请前往 <a href="https://gitee.com/oauth/applications" target="_blank">Gitee 第三方应用</a> 创建应用，回调地址填写：<code class="bg-light px-2 py-1 rounded"><%= "#{request.base_url}/users/auth/gitee/callback" %></code></p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= f.label :gitee_client_id, "Client ID", class: "form-label fw-semibold small" %>
+              <%= f.text_field :gitee_client_id, value: @settings[:gitee_client_id], class: "form-control form-control-sm", placeholder: "请输入 Client ID" %>
+            </div>
+            <div class="col-md-6">
+              <%= f.label :gitee_client_secret, "Client Secret", class: "form-label fw-semibold small" %>
+              <%= f.text_field :gitee_client_secret, value: @settings[:gitee_client_secret], class: "form-control form-control-sm", placeholder: "请输入 Client Secret" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 百度翻译 -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-translate me-2 text-primary"></i>百度翻译 API</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">用于将主题标题自动翻译为英文，生成友好的 URL 地址。请前往 <a href="https://fanyi-api.baidu.com/" target="_blank">百度翻译开放平台</a> 获取 APPID 和密钥。</p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <%= f.label :baidu_translate_appid, "APP ID", class: "form-label fw-semibold small" %>
+              <%= f.text_field :baidu_translate_appid, value: @settings[:baidu_translate_appid], class: "form-control form-control-sm", placeholder: "请输入 APP ID" %>
+            </div>
+            <div class="col-md-6">
+              <%= f.label :baidu_translate_key, "密钥", class: "form-label fw-semibold small" %>
+              <%= f.text_field :baidu_translate_key, value: @settings[:baidu_translate_key], class: "form-control form-control-sm", placeholder: "请输入密钥" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 邮件验证码 -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-envelope-check me-2 text-success"></i>邮箱验证码</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">启用后，用户注册时需要先通过邮箱接收验证码完成验证。使用 Sendflare 邮件发送服务，请前往 <a href="https://sendflare.com" target="_blank">Sendflare</a> 注册账号并获取 API Token。</p>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">启用邮箱验证码</label>
+              <select name="settings[email_verification_enabled]" class="form-select form-select-sm">
+                <option value="false" <%= "selected" if @settings[:email_verification_enabled] != "true" %>>关闭</option>
+                <option value="true" <%= "selected" if @settings[:email_verification_enabled] == "true" %>>启用</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <%= f.label :sendflare_from_email, "发件邮箱", class: "form-label fw-semibold small" %>
+              <%= f.email_field :sendflare_from_email, value: @settings[:sendflare_from_email], class: "form-control form-control-sm", placeholder: "noreply@example.com" %>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-12">
+              <%= f.label :sendflare_api_token, "API Token", class: "form-label fw-semibold small" %>
+              <%= f.text_field :sendflare_api_token, value: @settings[:sendflare_api_token], class: "form-control form-control-sm", placeholder: "请输入 Sendflare API Token" %>
+              <div class="form-text">请前往 Sendflare 控制台的 API Keys 页面创建 Token</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 邀请码 -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-key me-2 text-warning"></i>邀请码注册</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">启用后，新用户注册时必须输入有效的邀请码才能完成注册。可在 <a href="<%= admin_invitation_codes_path %>">邀请码管理</a> 页面生成和管理邀请码。</p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">启用邀请码注册</label>
+              <select name="settings[invitation_code_enabled]" class="form-select form-select-sm">
+                <option value="false" <%= "selected" if @settings[:invitation_code_enabled] != "true" %>>关闭</option>
+                <option value="true" <%= "selected" if @settings[:invitation_code_enabled] == "true" %>>启用</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">邀请码提示语</label>
+              <input type="text" name="settings[invitation_code_hint]" value="<%= @settings[:invitation_code_hint] %>" class="form-control form-control-sm" placeholder="注册需要邀请码，请向已有用户索取">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 社区数据装饰 -->
+      <div class="card card-admin mb-4">
+        <div class="card-header py-3">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line me-2 text-info"></i>社区数据装饰</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">设置首页显示的注册会员数、主题数、回复数的虚拟增量。最终显示数值 = 真实数据 + 虚拟增量。如：真实会员 1121，虚拟增量 10000，则显示 11121。留空或填 0 表示不增加。</p>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">注册会员数增量</label>
+              <input type="number" name="settings[fake_users_count]" value="<%= @settings[:fake_users_count] %>" class="form-control form-control-sm" min="0" placeholder="0">
+              <div class="form-text">当前真实会员：<%= User.count %></div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">主题数增量</label>
+              <input type="number" name="settings[fake_topics_count]" value="<%= @settings[:fake_topics_count] %>" class="form-control form-control-sm" min="0" placeholder="0">
+              <div class="form-text">当前真实主题：<%= Topic.count %></div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">回复数增量</label>
+              <input type="number" name="settings[fake_comments_count]" value="<%= @settings[:fake_comments_count] %>" class="form-control form-control-sm" min="0" placeholder="0">
+              <div class="form-text">当前真实回复：<%= Comment.count %></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary rounded-pill px-4">
+          <i class="bi bi-check-lg me-1"></i>保存设置
+        </button>
+      </div>
+    <% end %>
+  </div>
+</div>

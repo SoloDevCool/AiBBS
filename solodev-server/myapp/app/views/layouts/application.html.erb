@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html data-bs-theme="light">
+  <head>
+    <title><%= content_for(:title) || SiteSetting.get("seo_title", default: "SoloDev.Cool - 独立开发者社区") %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="SoloDev.Cool">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= seo_meta_tags %>
+    <%= json_ld_website %>
+
+    <% if SiteSetting.get("seo_google_verification").present? %>
+      <meta name="google-site-verification" content="<%= SiteSetting.get("seo_google_verification") %>">
+    <% end %>
+    <% if SiteSetting.get("seo_bing_verification").present? %>
+      <meta name="msvalidate.01" content="<%= SiteSetting.get("seo_bing_verification") %>">
+    <% end %>
+    <% if SiteSetting.get("seo_baidu_verification").present? %>
+      <meta name="baidu-site-verification" content="<%= SiteSetting.get("seo_baidu_verification") %>">
+    <% end %>
+
+    <%= yield :head %>
+
+    <% if site_favicon_url %>
+      <link rel="icon" href="<%= site_favicon_url %>" type="image/png">
+      <link rel="apple-touch-icon" href="<%= site_favicon_url %>">
+    <% else %>
+      <link rel="icon" href="/icon.png" type="image/png">
+      <link rel="icon" href="/icon.svg" type="image/svg+xml">
+      <link rel="apple-touch-icon" href="/icon.png">
+    <% end %>
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- html2canvas for poster generation -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+
+    <script>
+      // Apply theme immediately to prevent flash
+      (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', theme);
+      })();
+    </script>
+  </head>
+
+  <body class="d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg sticky-top shadow-sm">
+      <div class="container-lg">
+        <a class="navbar-brand d-flex align-items-center" href="<%= topics_path %>">
+          <% case site_logo_display_mode %>
+          <% when "logo" %>
+            <% if site_logo_url %>
+              <img src="<%= site_logo_url %>" alt="Logo" style="max-height: 32px; max-width: 160px; object-fit: contain;">
+            <% else %>
+              SoloDev.Cool
+            <% end %>
+          <% when "icon_logo" %>
+            <% if site_logo_url %>
+              <img src="<%= site_logo_url %>" alt="Logo" style="max-height: 32px; max-width: 160px; object-fit: contain;" class="me-1">
+            <% end %>
+            SoloDev.Cool
+          <% else %>
+            <i class="bi bi-terminal me-1"></i>SoloDev.Cool
+          <% end %>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item"><a class="nav-link fw-medium" href="<%= topics_path %>"><i class="bi bi-house-door me-1"></i>社区</a></li>
+            <% if SiteSetting.get("chat_groups_enabled", default: "false") == "true" %>
+              <li class="nav-item"><a class="nav-link fw-medium" href="<%= chat_groups_path %>"><i class="bi bi-people me-1"></i>交流群</a></li>
+            <% end %>
+          </ul>
+
+          <form class="d-flex me-3" role="search" action="<%= search_path %>" method="get" style="max-width:240px">
+            <div class="input-group">
+              <span class="input-group-text border-end-0"><i class="bi bi-search" style="font-size:0.85rem"></i></span>
+              <input class="form-control form-control-sm border-start-0" type="search" name="q" placeholder="搜索主题..." aria-label="Search">
+            </div>
+          </form>
+
+          <ul class="navbar-nav align-items-center">
+            <li class="nav-item me-2">
+              <button class="theme-toggle" id="themeToggle" title="切换主题">
+                <i class="bi bi-sun-fill"></i>
+              </button>
+            </li>
+            <% if user_signed_in? %>
+              <li class="nav-item me-2">
+                <div class="dropdown">
+                  <button class="btn btn-link nav-link p-0 position-relative" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="notificationDropdownBtn">
+                    <i class="bi bi-bell" style="font-size:1.1rem"></i>
+                    <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;display:none">0</span>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-end p-0" style="width:340px;max-height:400px;overflow-y:auto" id="notificationDropdown" aria-labelledby="notificationDropdownBtn">
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+                      <span class="fw-bold" style="font-size:0.85rem"><i class="bi bi-bell me-1"></i>通知</span>
+                      <a href="<%= notifications_path %>" class="link-primary" style="font-size:0.75rem">查看全部</a>
+                    </div>
+                    <div id="notification-list" class="notification-dropdown-list">
+                      <div class="text-center text-muted py-4" style="font-size:0.8rem" id="notification-loading">
+                        <div class="spinner-border spinner-border-sm me-1"></div>加载中...
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            <% end %>
+            <% if user_signed_in? && current_user.admin? %>
+              <li class="nav-item"><%= link_to admin_root_path, class: "nav-link" do %><i class="bi bi-gear me-1"></i>管理<% end %></li>
+            <% end %>
+            <% if user_signed_in? %>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                  <% if current_user.has_avatar? %>
+                    <img src="<%= current_user.avatar_data_url %>" class="rounded-3 me-1" style="width:22px;height:22px;object-fit:cover" alt="">
+                  <% else %>
+                    <i class="bi bi-person-circle me-1"></i>
+                  <% end %>
+                  <span class="d-none d-sm-inline"><%= current_user.display_name %></span>
+                  <span class="badge <%= current_user.admin? ? 'bg-warning text-dark' : 'bg-info' %> ms-1" style="font-size:0.65rem">
+                    <%= current_user.role_label %>
+                  </span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><%= link_to profile_path, class: "dropdown-item" do %><i class="bi bi-person me-2"></i>个人中心<% end %></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <%= button_to destroy_user_session_path, method: :delete, class: "dropdown-item text-danger" do %>
+                      <i class="bi bi-box-arrow-right me-2"></i>退出
+                    <% end %>
+                  </li>
+                </ul>
+              </li>
+            <% else %>
+              <li class="nav-item"><%= link_to new_user_session_path, class: "nav-link" do %><i class="bi bi-box-arrow-in-right me-1"></i>登录<% end %></li>
+              <li class="nav-item"><%= link_to new_user_registration_path, class: "nav-link" do %><i class="bi bi-person-plus me-1"></i>注册<% end %></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <% if notice %>
+      <div class="container-lg mt-3"><div class="alert alert-success alert-dismissible fade show py-2" role="alert"><%= notice %><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div></div>
+    <% end %>
+    <% if alert %>
+      <div class="container-lg mt-3"><div class="alert alert-danger alert-dismissible fade show py-2" role="alert"><%= alert %><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div></div>
+      <% end %>
+
+    <%= yield %>
+
+    <div class="mt-auto">
+    <footer class="text-center text-muted py-4" style="font-size:0.85rem">
+      <div class="container-lg">
+        <% if SiteSetting.get("footer_text").present? %>
+          <%= raw SiteSetting.get("footer_text") %>
+        <% else %>
+          SoloDev.Cool 独立开发者社区 &copy; 2026 &middot; Built with Ruby on Rails
+        <% end %>
+      </div>
+    </footer>
+
+    <% active_friend_links = FriendLink.active.ordered %>
+    <% if SiteSetting.get("friend_links_enabled") != "false" && active_friend_links.any? %>
+    <div class="py-3 border-top" style="font-size:0.85rem">
+      <div class="container-lg">
+        <div class="d-flex flex-wrap align-items-center justify-content-center gap-3">
+          <span class="text-muted fw-semibold" style="white-space:nowrap">友情链接：</span>
+          <% active_friend_links.each do |link| %>
+            <a href="<%= link.url %>" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-muted" title="<%= link.description || link.name %>">
+              <% if link.logo.present? %>
+                <img src="<%= link.logo %>" alt="<%= link.name %>" style="width:20px;height:20px;border-radius:3px;object-fit:cover;vertical-align:middle;margin-right:3px;">
+              <% end %>
+              <%= link.name %>
+            </a>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    <% end %>
+    </div>
+
+    <% if SiteSetting.get("seo_footer_html").present? %>
+      <%= raw SiteSetting.get("seo_footer_html") %>
+    <% end %>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+
+    <!-- Theme toggle script -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const toggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        function updateIcon(theme) {
+          const icon = toggle.querySelector('i');
+          if (theme === 'dark') {
+            icon.className = 'bi bi-moon-fill';
+          } else {
+            icon.className = 'bi bi-sun-fill';
+          }
+        }
+
+        // Set initial icon
+        updateIcon(html.getAttribute('data-bs-theme'));
+
+        toggle.addEventListener('click', function() {
+          const current = html.getAttribute('data-bs-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          html.setAttribute('data-bs-theme', next);
+          localStorage.setItem('theme', next);
+          updateIcon(next);
+        });
+      });
+    </script>
+
+    <% if user_signed_in? %>
+    <style>
+      .notification-dropdown-item{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;border-bottom:1px solid var(--bs-border-color);transition:background .15s;text-decoration:none!important;color:var(--text-primary)!important}
+      .notification-dropdown-item:hover{background-color:rgba(0,0,0,.03)}
+      .notification-dropdown-item.unread{background-color:#f0f9ff;border-left:3px solid #0ea5e9}
+      .notification-dropdown-item.unread:hover{background-color:#e0f2fe}
+      .notification-dropdown-item .ndi-icon{flex-shrink:0;padding-top:2px}
+      .notification-dropdown-item .ndi-body{flex-grow:1;min-width:0}
+      .notification-dropdown-item .ndi-text{font-size:0.8rem;line-height:1.4;color:var(--text-primary)}
+      .notification-dropdown-item .ndi-time{font-size:0.7rem;color:#6b7280}
+      [data-bs-theme="dark"] .notification-dropdown-item:hover{background-color:rgba(255,255,255,.04)}
+      [data-bs-theme="dark"] .notification-dropdown-item.unread{background-color:#0c2d48;border-left-color:#38bdf8}
+      [data-bs-theme="dark"] .notification-dropdown-item.unread:hover{background-color:#164e63}
+    </style>
+    <script>
+    (function() {
+      var badge = document.getElementById('notification-badge');
+      var list = document.getElementById('notification-list');
+      var loadingEl = document.getElementById('notification-loading');
+      var dropdownBtn = document.getElementById('notificationDropdownBtn');
+      var loaded = false;
+
+      function updateBadge(count) {
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count;
+          badge.style.display = '';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      function fetchUnreadCount() {
+        fetch('/notifications/unread_count', { credentials: 'same-origin' })
+          .then(function(r) { return r.json(); })
+          .then(function(d) { updateBadge(d.count); });
+      }
+
+      function fetchNotifications() {
+        if (loaded) return;
+        loaded = true;
+        fetch('/notifications?per_page=10', { credentials: 'same-origin' })
+          .then(function(r) { return r.text(); })
+          .then(function(html) {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var items = doc.querySelectorAll('.notification-item');
+            if (items.length === 0) {
+              list.innerHTML = '<div class="text-center text-muted py-4" style="font-size:0.8rem"><i class="bi bi-bell-slash d-block mb-1" style="font-size:1.2rem"></i>暂无通知</div>';
+              return;
+            }
+            var fragment = '';
+            items.forEach(function(item) {
+              var icon = item.querySelector('i.bi');
+              var link = item.querySelector('a[href]');
+              var textEl = item.querySelector('.notification-item .flex-grow-1 > div:first-child');
+              var timeEl = item.querySelector('.notification-item .text-muted');
+              var isUnread = item.classList.contains('unread');
+              var iconHtml = icon ? icon.outerHTML : '';
+              var text = textEl ? textEl.textContent : '';
+              var time = timeEl ? timeEl.textContent : '';
+              var href = link ? link.getAttribute('href') : '#';
+              var ndClass = isUnread ? 'notification-dropdown-item unread' : 'notification-dropdown-item';
+              fragment += '<a href="' + href + '" class="' + ndClass + '">' +
+                '<div class="ndi-icon">' + iconHtml + '</div>' +
+                '<div class="ndi-body"><div class="ndi-text">' + text + '</div><div class="ndi-time">' + time + '</div></div>' +
+                '</a>';
+            });
+            list.innerHTML = fragment;
+          });
+      }
+
+      // Poll unread count every 30s
+      fetchUnreadCount();
+      setInterval(fetchUnreadCount, 30000);
+
+      // Load notifications on dropdown open
+      if (dropdownBtn) {
+        var dropdownEl = dropdownBtn.closest('.dropdown');
+        dropdownEl.addEventListener('shown.bs.dropdown', fetchNotifications);
+      }
+    })();
+    </script>
+    <% end %>
+  </body>
+</html>

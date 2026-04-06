@@ -1,0 +1,82 @@
+<% content_for :title, "通知 - SoloDev.Cool" %>
+
+<div class="container-lg py-3" style="max-width:680px">
+  <div class="bg-white rounded shadow-sm overflow-hidden">
+    <div class="d-flex align-items-center justify-content-between border-bottom px-3 py-2">
+      <h6 class="mb-0 fw-bold"><i class="bi bi-bell me-2"></i>通知</h6>
+      <div class="d-flex gap-2 align-items-center">
+        <%= link_to "全部", notifications_path, class: "btn btn-sm #{params[:scope] != 'unread' ? 'btn-primary' : 'btn-outline-secondary'} rounded-pill px-3" %>
+        <%= link_to "未读", notifications_path(scope: :unread), class: "btn btn-sm #{params[:scope] == 'unread' ? 'btn-primary' : 'btn-outline-secondary'} rounded-pill px-3" %>
+        <% if current_user.notifications.unread.exists? %>
+          <%= button_to "全部已读", read_all_notifications_path, method: :patch, class: "btn btn-sm btn-outline-primary rounded-pill px-3" %>
+        <% end %>
+      </div>
+    </div>
+
+    <% @notifications.each do |n| %>
+      <div class="notification-item d-flex align-items-start gap-2 px-3 py-2 border-bottom <%= 'unread' unless n.read? %>" id="notification-<%= n.id %>">
+        <div class="flex-shrink-0 pt-1">
+          <i class="bi <%= notify_icon(n.notify_type) %> <%= notify_icon_color(n.notify_type) %>" style="font-size:1rem"></i>
+        </div>
+        <div class="flex-grow-1" style="min-width:0">
+          <% if n.notification_path.present? %>
+            <%= link_to n.notification_path, class: "text-decoration-none d-block", style: "color:var(--text-primary)" do %>
+              <div style="font-size:0.85rem;line-height:1.5"><%= n.notification_text %></div>
+            <% end %>
+          <% else %>
+            <div style="font-size:0.85rem;line-height:1.5;color:var(--text-primary)"><%= n.notification_text %></div>
+          <% end %>
+          <div class="text-muted" style="font-size:0.72rem"><%= time_ago_in_words(n.created_at) %>前</div>
+        </div>
+        <% unless n.read? %>
+          <button type="button" class="btn btn-sm btn-link text-muted p-0 flex-shrink-0 mark-read-btn" style="font-size:0.75rem"
+            data-notification-id="<%= n.id %>" title="标记已读">
+            <i class="bi bi-check-circle"></i>
+          </button>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @notifications.empty? %>
+      <div class="text-center text-muted py-5" style="font-size:0.85rem">
+        <i class="bi bi-bell-slash d-block mb-2" style="font-size:1.5rem"></i>
+        暂无通知
+      </div>
+    <% end %>
+  </div>
+
+  <% if @pagy && @pagy.pages > 1 %>
+    <div class="d-flex justify-content-center mt-3">
+      <%== pagy_nav(@pagy) %>
+    </div>
+  <% end %>
+</div>
+
+<style>
+.notification-item{transition:background .15s}
+.notification-item:hover{background-color:rgba(0,0,0,.02)}
+.notification-item.unread{border-left:3px solid #0ea5e9;background-color:#f0f9ff}
+.notification-item.unread:hover{background-color:#e0f2fe}
+[data-bs-theme="dark"] .notification-item:hover{background-color:rgba(255,255,255,.04)}
+[data-bs-theme="dark"] .notification-item.unread{background-color:#0c2d48;border-left-color:#38bdf8}
+[data-bs-theme="dark"] .notification-item.unread:hover{background-color:#164e63}
+</style>
+
+<script>
+document.querySelectorAll('.mark-read-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var id = this.dataset.notificationId;
+    var item = document.getElementById('notification-' + id);
+    var token = document.querySelector('meta[name="csrf-token"]').content;
+
+    fetch('/notifications/' + id, {
+      method: 'PATCH',
+      headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },
+      credentials: 'same-origin'
+    }).then(function() {
+      item.classList.remove('unread');
+      btn.remove();
+    });
+  });
+});
+</script>

@@ -1,0 +1,20 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch('DB_HOST') { '45.249.245.3' } %>
+  port: <%= ENV.fetch('DB_PORT') { 5432 } %>
+  username: <%= ENV.fetch('DB_USERNAME') { 'oxida' } %>
+  password: <%= ENV.fetch('DB_PASSWORD') { 'Zero5968154@' } %>
+
+development:
+  <<: *default
+  database: myapp_development
+
+test:
+  <<: *default
+  database: myapp_test
+
+production:
+  <<: *default
+  database: myapp_production

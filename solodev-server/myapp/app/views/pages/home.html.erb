@@ -1,0 +1,241 @@
+<div class="container-lg py-3">
+  <div class="row g-3">
+
+    <!-- Left Sidebar: Node List -->
+    <div class="col-lg-2 left-sidebar">
+      <div class="node-list">
+        <a href="<%= topics_path %>" class="node-item active">
+          <span class="node-icon"><i class="bi bi-grid"></i></span>
+          <span>全部</span>
+          <span class="node-count"><%= @topic_count %></span>
+        </a>
+        <% {"system" => "system", "interest" => "interest"}.each do |order_key, kind| %>
+          <% nodes = @nodes.select { |n| n.kind == kind } %>
+          <% next if nodes.empty? %>
+          <h6 class="text-muted mb-1 mt-3 ps-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
+            <i class="bi <%= kind == 'system' ? 'bi-gear' : 'bi-star' %> me-1"></i><%= Node.kinds_i18n[kind.to_sym] %>
+          </h6>
+          <% if kind == "interest" %>
+            <% if user_signed_in? %>
+              <% if @followed_nodes.present? %>
+                <% @followed_nodes.each do |node| %>
+                  <a href="<%= node_topics_path(node) %>" class="node-item">
+                    <span class="node-icon"><%= node.icon.presence || "📄" %></span>
+                    <span><%= node.name %></span>
+                    <span class="node-count"><%= node.topics_count %></span>
+                  </a>
+                <% end %>
+              <% else %>
+                <div class="text-muted text-center py-2" style="font-size:0.78rem">
+                  <a href="<%= topics_path(kind: 'interest') %>" class="text-decoration-none">去发现节点</a>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="text-muted text-center py-2" style="font-size:0.78rem">
+                <a href="<%= new_user_session_path %>" class="text-decoration-none">登录后查看</a>
+              </div>
+            <% end %>
+          <% else %>
+            <% nodes.each do |node| %>
+              <a href="<%= node_topics_path(node) %>" class="node-item">
+                <span class="node-icon"><%= node.icon.presence || "📄" %></span>
+                <span><%= node.name %></span>
+                <span class="node-count"><%= node.topics_count %></span>
+              </a>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Center: Topic List -->
+    <div class="col-lg-7">
+      <div class="bg-white rounded shadow-sm overflow-hidden">
+        <!-- Tab bar -->
+        <div class="d-flex align-items-center border-bottom px-3 py-2">
+          <a href="<%= topics_path %>" class="btn btn-sm btn-outline-primary me-2 active">最新</a>
+          <div class="ms-auto">
+            <% if user_signed_in? %>
+              <%= link_to new_topic_path, class: "btn btn-sm btn-primary" do %><i class="bi bi-plus-lg me-1"></i>创建主题<% end %>
+            <% else %>
+              <%= link_to new_user_session_path, class: "btn btn-sm btn-outline-primary" do %><i class="bi bi-box-arrow-in-right me-1"></i>登录后发布<% end %>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Topic list -->
+        <div class="topic-list">
+          <% @recent_topics.each do |topic| %>
+            <div class="topic-item">
+              <% if topic.user.has_avatar? %>
+                <div class="topic-avatar" style="padding:2px">
+                  <img src="<%= topic.user.avatar_data_url %>" class="rounded-3 w-100 h-100" style="object-fit:cover" alt="">
+                </div>
+              <% else %>
+                <div class="topic-avatar bg-avatar-<%= topic.user.id % 5 + 1 %>">
+                  <%= user_initial(topic.user) %>
+                </div>
+              <% end %>
+              <div class="topic-body">
+                <div class="d-flex align-items-start gap-2">
+                  <a href="<%= topic_path(topic) %>" class="topic-title text-truncate"><%= topic.title %></a>
+                </div>
+                <div class="topic-meta">
+                  <span class="badge badge-node"><%= topic.node.icon %> <%= topic.node.name %></span>
+                  <span class="ms-1">
+                    <strong><%= topic.user.display_name %></strong>
+                    &middot; <%= time_ago_in_words(topic.created_at) %>前
+                    &middot; <span class="text-muted"><i class="bi bi-eye me-1"></i><%= topic.views_count %></span>
+                  </span>
+                </div>
+              </div>
+              <div class="topic-stats" style="align-self:center">
+                <span class="badge bg-secondary text-white" style="font-size:0.7rem;padding:0.3em 0.55em;border-radius:0.2rem"><%= topic.comments.count %></span>
+              </div>
+            </div>
+          <% end %>
+          <% if @recent_topics.empty? %>
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-chat-square-text d-block mb-2" style="font-size:2rem"></i>
+              <p>暂无主题，快来发布第一个吧！</p>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- View all -->
+        <div class="d-flex justify-content-center py-3 border-top">
+          <%= link_to "查看全部主题", topics_path, class: "btn btn-sm btn-outline-secondary rounded-pill px-3" %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="col-lg-3 right-sidebar">
+      <!-- User Card -->
+      <div class="sidebar-card user-card mb-3">
+        <div class="card-header-bg"></div>
+        <div class="card-body text-center pb-0">
+          <div class="avatar-wrapper">
+            <% if user_signed_in? %>
+              <%= link_to profile_path, class: "d-block" do %>
+                <div class="user-avatar bg-avatar-1">
+                  <% if current_user.has_avatar? %>
+                    <img src="<%= current_user.avatar_data_url %>" class="rounded-3 w-100 h-100" style="object-fit:cover" alt="头像">
+                  <% else %>
+                    <%= user_initial(current_user) %>
+                  <% end %>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="user-avatar bg-avatar-1">
+                <i class="bi bi-person" style="font-size:1.5rem"></i>
+              </div>
+            <% end %>
+          </div>
+          <div class="user-name">
+            <% if user_signed_in? %>
+              <%= link_to profile_path, class: "text-decoration-none text-dark" do %>
+                <%= current_user.display_name %>
+              <% end %>
+              <span class="badge <%= current_user.admin? ? 'bg-warning text-dark' : 'bg-info' %> user-role-badge" style="font-size:0.6rem">
+                <%= current_user.role_label %>
+              </span>
+            <% else %>
+              游客
+            <% end %>
+          </div>
+          <div class="user-stats-row">
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <%= link_to topics_path, class: "text-decoration-none" do %>
+                  <div class="user-stat-value"><%= current_user.topics.count %></div>
+                  <div class="user-stat-label">主题</div>
+                <% end %>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">主题</div>
+              <% end %>
+            </div>
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <%= link_to profile_path(tab: "following"), class: "text-decoration-none" do %>
+                  <div class="user-stat-value"><%= current_user.following.count %></div>
+                  <div class="user-stat-label">已关注</div>
+                <% end %>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">已关注</div>
+              <% end %>
+            </div>
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <%= link_to profile_path(tab: "followers"), class: "text-decoration-none" do %>
+                  <div class="user-stat-value"><%= current_user.followers.count %></div>
+                  <div class="user-stat-label">粉丝</div>
+                <% end %>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">粉丝</div>
+              <% end %>
+            </div>
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <div class="user-stat-value"><%= current_user.points %></div>
+                <div class="user-stat-label">酷能量</div>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">酷能量</div>
+              <% end %>
+            </div>
+          </div>
+          <% if user_signed_in? %>
+          <div class="text-center px-3">
+            <%= link_to new_topic_path, class: "btn btn-primary rounded-3 w-100 mt-3 mb-3" do %>
+              <i class="bi bi-plus-lg me-1"></i>创建主题
+            <% end %>
+          </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Hot Topics -->
+      <% unless @hot_topics.empty? %>
+        <div class="sidebar-card mb-3">
+          <div class="card-header d-flex align-items-center">
+            <i class="bi bi-fire text-danger me-2"></i>热门主题
+          </div>
+          <div class="card-body p-0">
+            <% @hot_topics.each_with_index do |topic, idx| %>
+              <a href="<%= topic_path(topic) %>" class="hot-item d-flex align-items-start">
+                <span class="hot-rank <%= idx < 3 ? "top-#{idx + 1}" : '' %>"><%= idx + 1 %></span>
+                <span class="text-truncate"><%= topic.title %></span>
+              </a>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Community Stats -->
+      <div class="sidebar-card">
+        <div class="card-header d-flex align-items-center">
+          <i class="bi bi-bar-chart me-2"></i>社区统计
+        </div>
+        <div class="card-body px-3 py-2">
+          <div class="d-flex justify-content-between align-items-center mb-2 px-1" style="font-size:0.85rem">
+            <span class="text-muted">注册用户</span>
+            <strong><%= @user_count %></strong>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2 px-1" style="font-size:0.85rem">
+            <span class="text-muted">主题数量</span>
+            <strong><%= @topic_count %></strong>
+          </div>
+          <div class="d-flex justify-content-between align-items-center px-1" style="font-size:0.85rem">
+            <span class="text-muted">节点数量</span>
+            <strong><%= @node_count %></strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

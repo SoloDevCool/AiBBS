@@ -1,0 +1,135 @@
+<% content_for :title, "搜索：#{@q} - SoloDev.Cool" %>
+<% content_for :head do %>
+  <meta name="robots" content="noindex, nofollow">
+<% end %>
+
+<div class="container-lg py-3">
+  <div class="row g-3">
+
+    <!-- 主题列表 -->
+    <div class="col-lg-9">
+      <div class="bg-white rounded shadow-sm overflow-hidden">
+        <!-- 搜索栏 -->
+        <div class="border-bottom px-3 py-3">
+          <form action="<%= search_path %>" method="get" class="search-form">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" name="q" value="<%= @q %>" class="form-control border-start-0 ps-0" placeholder="输入关键词搜索主题..." autofocus aria-label="搜索">
+              <button class="btn btn-primary" type="submit">搜索</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 搜索结果信息 -->
+        <div class="border-bottom px-3 py-2 d-flex align-items-center justify-content-between">
+          <span class="text-muted" style="font-size:0.85rem">
+            搜索 "<strong class="text-dark"><%= @q %></strong>" 找到
+            <strong><%= @total_count %></strong> 条结果
+          </span>
+          <span class="text-muted" style="font-size:0.78rem">
+            用时 < <%= (rand * 50 + 5).round(1) %>ms
+          </span>
+        </div>
+
+        <!-- 搜索结果列表 -->
+        <div class="topic-list">
+          <% @topics.each do |topic| %>
+            <div class="topic-item search-result-item">
+              <% if topic.user.has_avatar? %>
+                <div class="topic-avatar" style="padding:2px">
+                  <img src="<%= topic.user.avatar_data_url %>" class="rounded-3 w-100 h-100" style="object-fit:cover" alt="">
+                </div>
+              <% else %>
+                <div class="topic-avatar bg-avatar-<%= topic.user.id % 5 + 1 %>">
+                  <%= user_initial(topic.user) %>
+                </div>
+              <% end %>
+              <div class="topic-body">
+                <a href="<%= topic_path(topic) %>" class="topic-title"><%= highlight_keyword(topic.title, @q) %></a>
+                <div class="search-snippet"><%= highlight_keyword(truncate(strip_tags(topic.content), length: 160), @q) %></div>
+                <div class="topic-meta">
+                  <span class="badge badge-node"><%= topic.node.icon %> <%= topic.node.name %></span>
+                  <span class="ms-1">
+                    <strong><%= user_link_to(topic.user, class: "text-decoration-none", style: "color:var(--text-secondary)") %></strong>
+                    &middot; <%= time_ago_in_words(topic.created_at) %>前
+                    &middot; <span class="text-muted"><%= topic.views_count %> 浏览</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <% if @topics.empty? %>
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-search d-block mb-2" style="font-size:2.5rem"></i>
+              <p class="mb-1" style="font-size:1rem; color:#495057">没有找到相关主题</p>
+              <p style="font-size:0.85rem">试试换个关键词搜索，或者缩短搜索词</p>
+              <div class="mt-3">
+                <%= link_to "浏览全部主题", topics_path, class: "btn btn-sm btn-outline-primary rounded-pill px-3" %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- 分页 -->
+        <% if @pagy.last > 1 %>
+          <div class="d-flex justify-content-center py-3 border-top">
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <% if @pagy.previous %>
+                  <li class="page-item"><%= link_to raw('<i class="bi bi-chevron-left"></i>'), search_path(q: @q, page: @pagy.previous), class: "page-link" %></li>
+                <% end %>
+                <% @pagy.series.each do |item| %>
+                  <% if item.is_a?(Integer) %>
+                    <li class="page-item <%= item == @pagy.page ? 'active' : '' %>">
+                      <%= link_to item, search_path(q: @q, page: item), class: "page-link" %>
+                    </li>
+                  <% elsif item == :gap %>
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                  <% end %>
+                <% end %>
+                <% if @pagy.next %>
+                  <li class="page-item"><%= link_to raw('<i class="bi bi-chevron-right"></i>'), search_path(q: @q, page: @pagy.next), class: "page-link" %></li>
+                <% end %>
+              </ul>
+            </nav>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- 右侧栏 -->
+    <div class="col-lg-3 right-sidebar">
+      <!-- 搜索提示 -->
+      <div class="sidebar-card mb-3">
+        <div class="card-header d-flex align-items-center">
+          <i class="bi bi-lightbulb text-warning me-2"></i>搜索提示
+        </div>
+        <div class="card-body" style="font-size:0.85rem; color:#6c757d">
+          <ul class="mb-0 ps-3" style="line-height:1.8">
+            <li>搜索支持标题和内容匹配</li>
+            <li>关键词越精确，结果越准确</li>
+            <li>可以尝试搜索技术名词、错误信息</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 热门节点 -->
+      <div class="sidebar-card">
+        <div class="card-header d-flex align-items-center">
+          <i class="bi bi-fire text-danger me-2"></i>热门节点
+        </div>
+        <div class="card-body p-0">
+          <% Node.order(topics_count: :desc).limit(10).each do |node| %>
+            <a href="<%= node_topics_path(node) %>" class="hot-item d-flex align-items-center">
+              <span class="me-2"><%= node.icon.presence || "📄" %></span>
+              <span class="text-truncate flex-grow-1"><%= node.name %></span>
+              <span class="badge bg-light text-dark rounded-pill flex-shrink-0 ms-1" style="font-size:0.7rem"><%= node.topics_count %></span>
+            </a>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

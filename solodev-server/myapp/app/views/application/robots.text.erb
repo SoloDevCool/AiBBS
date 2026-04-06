@@ -1,0 +1,13 @@
+# See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /users/sign_in
+Disallow: /users/sign_up
+Disallow: /users/password/
+Disallow: /users/edit
+Disallow: /topics/search
+
+Sitemap: <%= root_url.chomp("/") %>/sitemap.xml

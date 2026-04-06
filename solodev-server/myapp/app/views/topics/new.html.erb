@@ -1,0 +1,502 @@
+<% content_for :title, "创建主题 - SoloDev.Cool" %>
+
+<div class="container-lg py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white border-bottom py-3">
+          <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2 text-primary"></i>创建主题</h5>
+        </div>
+        <div class="card-body p-4">
+          <%= form_with model: @topic, local: true do |f| %>
+            <% if @topic.errors.any? %>
+              <div class="alert alert-danger rounded-3 py-2">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                <ul class="mb-0 ms-3">
+                  <% @topic.errors.full_messages.each do |msg| %>
+                    <li><%= msg %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="mb-3">
+              <%= f.label :title, "标题", class: "form-label fw-semibold small text-muted" %>
+              <%= f.text_field :title, class: "form-control form-control-lg rounded-3", placeholder: "请输入主题标题（4-120个字符）", maxlength: 120 %>
+            </div>
+
+            <!-- 原创/转载 -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold small text-muted">
+                <i class="bi bi-file-earmark-text me-1"></i>文章类型
+              </label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <%= f.radio_button :is_repost, false, checked: true, class: "form-check-input", style: "cursor:pointer" %>
+                  <label class="form-check-label" style="font-size:0.9rem;cursor:pointer" for="topic_is_repost_false">原创</label>
+                </div>
+                <div class="form-check">
+                  <%= f.radio_button :is_repost, true, class: "form-check-input", style: "cursor:pointer", onchange: "toggleSourceUrl()" %>
+                  <label class="form-check-label" style="font-size:0.9rem;cursor:pointer" for="topic_is_repost_true">转载</label>
+                </div>
+              </div>
+              <div id="source-url-section" style="display:none" class="mt-2">
+                <%= f.text_field :source_url, class: "form-control form-control-sm rounded-3", placeholder: "请输入原文链接，如 https://example.com/article" %>
+                <div class="form-text small text-muted">转载时必须填写原文链接</div>
+              </div>
+            </div>
+
+            <!-- 投票设置 -->
+            <div class="mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <label class="form-label fw-semibold small text-muted mb-0">
+                  <i class="bi bi-bar-chart-line me-1"></i>投票选项 <span class="text-muted font-weight-normal">（可选）</span>
+                </label>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2" onclick="togglePollSection()" id="poll-toggle-btn">
+                  <i class="bi bi-plus-circle me-1"></i>添加投票
+                </button>
+              </div>
+              <div id="poll-section" style="display:none">
+                <div id="poll-options" class="mb-2">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="text-muted small" style="min-width:18px">A.</span>
+                    <input type="text" name="topic[poll_attributes][poll_options_attributes][0][title]" class="form-control form-control-sm rounded-3" placeholder="选项 1" maxlength="100">
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="text-muted small" style="min-width:18px">B.</span>
+                    <input type="text" name="topic[poll_attributes][poll_options_attributes][1][title]" class="form-control form-control-sm rounded-3" placeholder="选项 2" maxlength="100">
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2" onclick="addPollOption()" id="add-option-btn">
+                    <i class="bi bi-plus me-1"></i>添加选项
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2" onclick="removeLastPollOption()">
+                    <i class="bi bi-dash me-1"></i>删除选项
+                  </button>
+                </div>
+                <div class="form-text small text-muted mt-1">至少需要2个选项，最多10个</div>
+              </div>
+            </div>
+
+            <!-- Markdown toolbar -->
+            <div class="mb-0">
+              <div class="d-flex align-items-center gap-1 p-2 bg-light rounded-top border border-bottom-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="粗体" onclick="insertMd('**','**')"><i class="bi bi-type-bold"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="斜体" onclick="insertMd('*','*')"><i class="bi bi-type-italic"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="删除线" onclick="insertMd('~~','~~')"><i class="bi bi-type-strikethrough"></i></button>
+                <div class="vr mx-1"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="行内代码" onclick="insertMd('`','`')"><i class="bi bi-code-slash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="代码块" onclick="insertMd('\n```\n','\n```\n')"><i class="bi bi-file-code"></i></button>
+                <div class="vr mx-1"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="链接" onclick="insertMd('[','](url)')"><i class="bi bi-link-45deg"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="图片" onclick="document.getElementById('md-image-input').click()"><i class="bi bi-image"></i></button>
+                <input type="file" id="md-image-input" accept="image/*" class="d-none" onchange="uploadImage(this.files[0])">
+                <div class="vr mx-1"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="引用" onclick="insertMd('> ','')"><i class="bi bi-quote"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="无序列表" onclick="insertMd('\n- ','')"><i class="bi bi-list-ul"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="有序列表" onclick="insertMd('\n1. ','')"><i class="bi bi-list-ol"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="分割线" onclick="insertMd('\n\n---\n\n','')"><i class="bi bi-dash-lg"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="表格" onclick="insertMd('\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| ',' |  |  |\n')"><i class="bi bi-table"></i></button>
+                <div class="vr mx-1"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="仅注册用户可见" onclick="insertRegisteredOnly()" style="color:#92400e;border-color:#fbbf24"><i class="bi bi-eye-slash-fill"></i></button>
+                <div class="vr mx-1"></div>
+                <button type="button" id="preview-toggle-btn" class="btn btn-sm btn-outline-primary" onclick="togglePreview()"><i class="bi bi-eye me-1"></i>预览</button>
+                <span class="ms-auto text-muted small"><i class="bi bi-markdown me-1"></i>Markdown</span>
+              </div>
+
+              <!-- Editor / Preview -->
+              <div class="border border-top-0 rounded-bottom overflow-hidden" style="min-height:420px; position:relative">
+                <div id="editor-panel" style="min-height:420px">
+                  <%= f.text_area :content, id: "markdown-input", class: "form-control border-0 rounded-0 h-100", style: "min-height:420px; resize:none; font-family:'JetBrains Mono','Fira Code','Consolas',monospace; font-size:0.88rem; line-height:1.7", placeholder: "支持 Markdown 语法，点击上方「预览」按钮查看效果...", rows: 20 %>
+                </div>
+                <div id="preview-panel" class="markdown-body p-3 overflow-auto" style="display:none; min-height:420px"></div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div style="max-width:260px; flex:1;">
+                <%= f.select :node_id, grouped_options_for_select(
+                  {"system" => "system", "interest" => "interest"}.map do |_, kind|
+                    nodes = @nodes.select { |n| n.kind == kind }
+                    [Node.kinds_i18n[kind.to_sym], nodes.map { |n| ["#{n.icon} #{n.name}", n.id] }] if nodes.any?
+                  end.compact,
+                  @topic.node_id
+                ), { prompt: "-- 请选择节点 --" }, class: "form-select form-select-sm rounded-3", required: true %>
+              </div>
+              <div class="d-flex gap-2">
+                <%= link_to "取消", topics_path, class: "btn btn-outline-secondary rounded-pill px-4" %>
+                <%= f.submit "发布主题", class: "btn btn-primary rounded-pill px-4" %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Toggle source URL field
+function toggleSourceUrl() {
+  const repost = document.querySelector('input[name="topic[is_repost]"]:checked');
+  const section = document.getElementById('source-url-section');
+  section.style.display = repost && repost.value === 'true' ? 'block' : 'none';
+}
+
+// Poll functions (isolated to prevent TDZ errors from markdown init)
+let pollOptionCount = 2;
+const MAX_OPTIONS = 10;
+const optionLabels = 'ABCDEFGHIJ';
+
+function togglePollSection() {
+  const section = document.getElementById('poll-section');
+  const btn = document.getElementById('poll-toggle-btn');
+  if (section.style.display === 'none') {
+    section.style.display = 'block';
+    btn.innerHTML = '<i class="bi bi-dash-circle me-1"></i>取消投票';
+    btn.classList.remove('btn-outline-primary');
+    btn.classList.add('btn-outline-secondary');
+  } else {
+    section.style.display = 'none';
+    btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>添加投票';
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-outline-primary');
+  }
+}
+
+function addPollOption() {
+  if (pollOptionCount >= MAX_OPTIONS) {
+    alert('最多添加 ' + MAX_OPTIONS + ' 个选项');
+    return;
+  }
+  const container = document.getElementById('poll-options');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'd-flex align-items-center gap-2 mb-2';
+  div.innerHTML = '<span class="text-muted small" style="min-width:18px">' + optionLabels[pollOptionCount] + '.</span>' +
+    '<input type="text" name="topic[poll_attributes][poll_options_attributes][' + pollOptionCount + '][title]" class="form-control form-control-sm rounded-3" placeholder="选项 ' + (pollOptionCount + 1) + '" maxlength="100">';
+  container.appendChild(div);
+  pollOptionCount++;
+}
+
+function removeLastPollOption() {
+  if (pollOptionCount <= 2) {
+    alert('至少需要保留2个选项');
+    return;
+  }
+  const container = document.getElementById('poll-options');
+  if (!container || !container.lastElementChild) return;
+  container.removeChild(container.lastElementChild);
+  pollOptionCount--;
+}
+</script>
+
+<script>
+// Image upload helpers (independent of marked)
+function uploadImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  if (file.size > 5 * 1024 * 1024) { alert('图片大小不能超过 5MB'); return; }
+
+  var ta = document.getElementById('markdown-input');
+  var s = ta.selectionStart;
+  var placeholder = '![](上传中...)';
+  ta.setRangeText(placeholder, s, s, 'end');
+  ta.dispatchEvent(new Event('input'));
+
+  var formData = new FormData();
+  formData.append('file', file);
+
+  var token = document.querySelector('meta[name="csrf-token"]');
+  fetch('/upload_image', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-Token': token ? token.content : '',
+      'Accept': 'application/json'
+    },
+    body: formData
+  })
+  .then(function(r) {
+    if (!r.ok) {
+      return r.text().then(function(text) {
+        var msg = '上传失败';
+        try { var json = JSON.parse(text); msg = '上传失败：' + (json.error || ''); } catch(e) {}
+        throw new Error(msg + ' (HTTP ' + r.status + ')');
+      });
+    }
+    return r.json();
+  })
+  .then(function(data) {
+    if (data.url) {
+      ta.value = ta.value.replace(placeholder, '![](' + data.url + ')');
+    } else {
+      ta.value = ta.value.replace(placeholder, '');
+      alert('上传失败：' + (data.error || '未知错误'));
+    }
+    ta.dispatchEvent(new Event('input'));
+  })
+  .catch(function(err) {
+    ta.value = ta.value.replace(placeholder, '');
+    ta.dispatchEvent(new Event('input'));
+    alert(err.message || '上传失败，请重试');
+  });
+}
+
+(function() {
+  var input = document.getElementById('markdown-input');
+  if (!input) return;
+
+  // Paste image from clipboard
+  input.addEventListener('paste', function(e) {
+    var file = null;
+    if (e.clipboardData && e.clipboardData.items) {
+      for (var i = 0; i < e.clipboardData.items.length; i++) {
+        if (e.clipboardData.items[i].type.indexOf('image') !== -1) {
+          e.preventDefault();
+          file = e.clipboardData.items[i].getAsFile();
+          break;
+        }
+      }
+    }
+    if (!file && e.clipboardData && e.clipboardData.files) {
+      for (var j = 0; j < e.clipboardData.files.length; j++) {
+        if (e.clipboardData.files[j].type.startsWith('image/')) {
+          e.preventDefault();
+          file = e.clipboardData.files[j];
+          break;
+        }
+      }
+    }
+    if (file) uploadImage(file);
+    // Detect pasted file:// path and show hint
+    if (!file) {
+      var text = e.clipboardData && (e.clipboardData.getData('text/plain') || '');
+      if (text && text.trim().startsWith('file://')) {
+        e.preventDefault();
+        var fileName = text.trim().split('/').pop() || '图片';
+        if (confirm('浏览器无法直接读取本地文件。\n\n你粘贴的是：' + fileName + '\n\n请点击「确定」选择该文件上传，或使用工具栏图片按钮 / 拖拽图片到编辑器。')) {
+          document.getElementById('md-image-input').click();
+        }
+      }
+    }
+  });
+
+  // Drag & drop image
+  input.addEventListener('dragover', function(e) { e.preventDefault(); input.classList.add('border-primary'); });
+  input.addEventListener('dragleave', function(e) { e.preventDefault(); input.classList.remove('border-primary'); });
+  input.addEventListener('drop', function(e) {
+    e.preventDefault();
+    input.classList.remove('border-primary');
+    var file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) uploadImage(file);
+  });
+})();
+</script>
+
+<script>
+// Preview toggle
+function togglePreview() {
+  var editor = document.getElementById('editor-panel');
+  var preview = document.getElementById('preview-panel');
+  var btn = document.getElementById('preview-toggle-btn');
+  if (!editor || !preview) return;
+
+  if (preview.style.display === 'none') {
+    // Switch to preview
+    if (typeof marked === 'undefined') {
+      alert('Markdown 渲染库尚未加载，请稍后再试');
+      return;
+    }
+    var input = document.getElementById('markdown-input');
+    var val = input ? input.value : '';
+    val = val.replace(/:::registered-only\n([\s\S]*?):::/g, function(match, inner) {
+      return '<div class="registered-only-block" style="border:1px solid #fde68a;border-radius:8px;padding:12px;background:#fffbeb">' +
+        '<div style="display:inline-flex;align-items:center;gap:4px;background:#fef3c7;color:#92400e;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:12px;margin-bottom:8px"><i class="bi bi-eye-slash-fill"></i> 仅注册用户可见</div>' +
+        marked.parse(inner.trim()) +
+        '</div>';
+    });
+    preview.innerHTML = marked.parse(val);
+    editor.style.display = 'none';
+    preview.style.display = 'block';
+    btn.innerHTML = '<i class="bi bi-pencil me-1"></i>编辑';
+    btn.classList.remove('btn-outline-primary');
+    btn.classList.add('btn-success');
+  } else {
+    // Switch to editor
+    editor.style.display = 'block';
+    preview.style.display = 'none';
+    btn.innerHTML = '<i class="bi bi-eye me-1"></i>预览';
+    btn.classList.remove('btn-success');
+    btn.classList.add('btn-outline-primary');
+    document.getElementById('markdown-input').focus();
+  }
+}
+</script>
+
+<script>
+// @ Mentions init
+(function() {
+  var input = document.getElementById('markdown-input');
+  if (input) initMention(input);
+})();
+
+function insertMd(before, after) {
+  const ta = document.getElementById('markdown-input');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.substring(s, e) || '';
+  const placeholder = before.match(/\n/) ? '' : '文本';
+  const replacement = before + (sel || placeholder) + after;
+  ta.setRangeText(replacement, s, e, 'end');
+  if (!sel) ta.selectionEnd = s + before.length + placeholder.length;
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
+}
+
+function insertRegisteredOnly() {
+  const ta = document.getElementById('markdown-input');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.substring(s, e) || '此处输入仅注册用户可见的内容';
+  const replacement = '\n:::registered-only\n' + sel + '\n:::\n';
+  ta.setRangeText(replacement, s, e, 'end');
+  ta.dispatchEvent(new Event('input'));
+  ta.focus();
+}
+
+function initMention(textarea) {
+  let mentionMenu = null;
+  let currentQuery = '';
+  let matchedUsers = [];
+  let selectedIndex = 0;
+  let mentionStartPos = 0;
+
+  function createMentionMenu() {
+    if (mentionMenu) return;
+    mentionMenu = document.createElement('div');
+    mentionMenu.className = 'mention-menu';
+    mentionMenu.style.cssText = 'position:absolute;z-index:1000;background:#fff;border:1px solid #dee2e6;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.15);max-height:200px;overflow-y:auto;display:none';
+    document.body.appendChild(mentionMenu);
+  }
+
+  function showMentionMenu(x, y) {
+    createMentionMenu();
+    mentionMenu.style.display = 'block';
+    mentionMenu.style.left = x + 'px';
+    mentionMenu.style.top = (y + 24) + 'px';
+  }
+
+  function hideMentionMenu() {
+    if (mentionMenu) mentionMenu.style.display = 'none';
+    currentQuery = '';
+    matchedUsers = [];
+  }
+
+  function renderMenu() {
+    if (!mentionMenu || matchedUsers.length === 0) {
+      hideMentionMenu();
+      return;
+    }
+    mentionMenu.innerHTML = matchedUsers.map((u, i) => `
+      <div class="mention-item ${i === selectedIndex ? 'selected' : ''}" data-index="${i}" data-username="${u.username}">
+        <div style="display:flex;align-items:center;padding:8px 12px;cursor:pointer;${i === selectedIndex ? 'background:#f8f9fa;' : ''}">
+          ${u.avatar ? `<img src="${u.avatar}" style="width:24px;height:24px;border-radius:50%;margin-right:8px;">` : `<div style="width:24px;height:24px;border-radius:50%;background:#6366f1;margin-right:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;">${u.username[0].toUpperCase()}</div>`}
+          <span style="font-size:14px;color:#333;">${u.username}</span>
+        </div>
+      </div>
+    `).join('');
+
+    mentionMenu.querySelectorAll('.mention-item').forEach((item, index) => {
+      item.addEventListener('click', () => insertUser(matchedUsers[index].username));
+      item.addEventListener('mouseenter', () => {
+        selectedIndex = index;
+        renderMenu();
+      });
+    });
+  }
+
+  async function searchUsers(query) {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    try {
+      const res = await fetch('/users/search?q=' + encodeURIComponent(query), {
+        headers: { 'X-CSRF-Token': token ? token.content : '' }
+      });
+      matchedUsers = await res.json();
+      selectedIndex = 0;
+      renderMenu();
+    } catch (e) {
+      matchedUsers = [];
+      hideMentionMenu();
+    }
+  }
+
+  function insertUser(username) {
+    const textBefore = textarea.value.substring(0, mentionStartPos);
+    const textAfter = textarea.value.substring(textarea.selectionEnd);
+    textarea.value = textBefore + '@' + username + ' ' + textAfter;
+    textarea.selectionStart = textarea.selectionEnd = mentionStartPos + username.length + 2;
+    textarea.dispatchEvent(new Event('input'));
+    textarea.focus();
+    hideMentionMenu();
+  }
+
+  textarea.addEventListener('keydown', (e) => {
+    if (mentionMenu && mentionMenu.style.display !== 'none') {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % matchedUsers.length;
+        renderMenu();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + matchedUsers.length) % matchedUsers.length;
+        renderMenu();
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        if (matchedUsers[selectedIndex]) {
+          insertUser(matchedUsers[selectedIndex].username);
+        }
+      } else if (e.key === 'Escape') {
+        hideMentionMenu();
+      }
+    }
+  });
+
+  textarea.addEventListener('input', (e) => {
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.substring(0, cursorPos);
+
+    const lastAtIndex = textBefore.lastIndexOf('@');
+    if (lastAtIndex === -1) {
+      hideMentionMenu();
+      return;
+    }
+
+    const textAfterAt = textBefore.substring(lastAtIndex + 1);
+    const spaceAfterAt = textAfterAt.indexOf(' ');
+    if (spaceAfterAt !== -1 || textAfterAt.length === 0) {
+      hideMentionMenu();
+      return;
+    }
+
+    if (textAfterAt.length >= 1) {
+      mentionStartPos = lastAtIndex;
+      const textareaRect = textarea.getBoundingClientRect();
+      const line = textarea.value.substring(0, cursorPos).split('\n').length - 1;
+      const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+      const scrollTop = textarea.scrollTop;
+      const x = textareaRect.left + 10;
+      const y = textareaRect.top + (line + 1) * lineHeight - scrollTop;
+
+      showMentionMenu(x, y);
+      if (currentQuery !== textAfterAt) {
+        currentQuery = textAfterAt;
+        searchUsers(textAfterAt);
+      }
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (mentionMenu && !mentionMenu.contains(e.target) && e.target !== textarea) {
+      hideMentionMenu();
+    }
+  });
+}
+</script>

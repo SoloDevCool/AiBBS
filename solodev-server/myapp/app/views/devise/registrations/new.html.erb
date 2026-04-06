@@ -1,0 +1,133 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="text-center mb-4">注册</h2>
+
+          <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "needs-validation" }) do |f| %>
+            <%= render "devise/shared/error_messages", resource: resource %>
+
+            <div class="mb-3">
+              <%= f.label :email, "邮箱", class: "form-label" %>
+              <div class="input-group">
+                <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "form-control", placeholder: "请输入邮箱", id: "registration_email" %>
+                <% if EmailVerificationService.enabled? %>
+                  <button type="button" class="btn btn-outline-secondary" id="sendCodeBtn" onclick="sendVerificationCode()">发送验证码</button>
+                <% end %>
+              </div>
+              <div class="form-text text-danger" id="emailError"></div>
+            </div>
+
+            <% if EmailVerificationService.enabled? %>
+              <div class="mb-3">
+                <%= f.label :verification_code, "邮箱验证码", class: "form-label" %>
+                <input type="text" name="user[verification_code]" id="user_verification_code" class="form-control" placeholder="请输入6位验证码" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+              </div>
+            <% end %>
+
+            <% if InvitationCode.requirement_enabled? %>
+              <div class="mb-3">
+                <%= f.label :invitation_code, "邀请码", class: "form-label" %>
+                <input type="text" name="user[invitation_code]" id="user_invitation_code" class="form-control text-uppercase" placeholder="请输入邀请码" autocomplete="off" style="letter-spacing:0.1em">
+                <div class="form-text"><%= SiteSetting.get("invitation_code_hint", default: "注册需要邀请码，请向已有用户索取") %></div>
+              </div>
+            <% end %>
+
+            <div class="mb-3">
+              <%= f.label :password, "密码", class: "form-label" %>
+              <% if @minimum_password_length %>
+                <small class="text-muted">（至少 <%= @minimum_password_length %> 个字符）</small>
+              <% end %>
+              <%= f.password_field :password, autocomplete: "new-password", class: "form-control", placeholder: "请输入密码" %>
+            </div>
+
+            <div class="mb-3">
+              <%= f.label :password_confirmation, "确认密码", class: "form-label" %>
+              <%= f.password_field :password_confirmation, autocomplete: "new-password", class: "form-control", placeholder: "请再次输入密码" %>
+            </div>
+
+            <div class="d-grid">
+              <%= f.submit "注册", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+
+          <hr>
+          <%= render "devise/shared/links" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if EmailVerificationService.enabled? %>
+  <script>
+    function sendVerificationCode() {
+      var emailInput = document.getElementById('registration_email');
+      var btn = document.getElementById('sendCodeBtn');
+      var errorDiv = document.getElementById('emailError');
+      var email = emailInput.value.trim();
+
+      // Validate email format
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errorDiv.textContent = '请输入有效的邮箱地址';
+        emailInput.classList.add('is-invalid');
+        return;
+      }
+
+      emailInput.classList.remove('is-invalid');
+      errorDiv.textContent = '';
+      btn.disabled = true;
+      btn.textContent = '发送中...';
+
+      var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+      fetch('<%= send_verification_code_path(format: :json) %>', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({ email: email })
+      })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) {
+          startCountdown(btn, 60);
+          errorDiv.textContent = '';
+          errorDiv.classList.remove('text-danger');
+          errorDiv.classList.add('text-success');
+          errorDiv.textContent = data.message;
+        } else {
+          btn.disabled = false;
+          btn.textContent = '发送验证码';
+          errorDiv.classList.remove('text-success');
+          errorDiv.classList.add('text-danger');
+          errorDiv.textContent = data.message;
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = '发送验证码';
+        errorDiv.classList.remove('text-success');
+        errorDiv.classList.add('text-danger');
+        errorDiv.textContent = '网络请求失败，请稍后重试';
+      });
+    }
+
+    function startCountdown(btn, seconds) {
+      var remaining = seconds;
+      btn.disabled = true;
+      btn.textContent = remaining + 's 后重发';
+      var timer = setInterval(function() {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(timer);
+          btn.disabled = false;
+          btn.textContent = '发送验证码';
+        } else {
+          btn.textContent = remaining + 's 后重发';
+        }
+      }, 1000);
+    }
+  </script>
+<% end %>

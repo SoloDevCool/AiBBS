@@ -1,0 +1,35 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="text-center mb-2">邀请码验证</h2>
+          <p class="text-center text-muted mb-4" style="font-size:0.9rem">本站已开启邀请码注册，请输入邀请码完成账号创建</p>
+
+          <% if alert %>
+            <div class="alert alert-danger alert-dismissible fade show py-2" role="alert"><%= alert %><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+          <% end %>
+
+          <%= form_with url: users_verify_oauth_invitation_code_path, method: :post, class: "needs-validation" do |f| %>
+            <div class="mb-3">
+              <label for="invitation_code" class="form-label">邀请码</label>
+              <input type="text" name="invitation_code" id="invitation_code" class="form-control text-uppercase" placeholder="请输入邀请码" required autofocus autocomplete="off" style="letter-spacing:0.1em">
+              <div class="form-text">请向已有用户索取邀请码</div>
+            </div>
+
+            <div class="d-grid mb-3">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>验证并注册
+              </button>
+            </div>
+          <% end %>
+
+          <hr>
+          <div class="text-center">
+            <a href="<%= new_user_session_path %>" class="text-decoration-none text-muted" style="font-size:0.9rem">返回登录</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

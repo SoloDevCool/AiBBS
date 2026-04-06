@@ -1,0 +1,98 @@
+<% content_for :title, "交流群 - SoloDev.Cool" %>
+<% content_for :head do %>
+  <%= seo_meta_tags(title: "交流群 - SoloDev.Cool", description: "加入 SoloDev.Cool 社区交流群，与其他开发者一起交流分享", url: chat_groups_url) %>
+<% end %>
+
+<div class="container-lg py-3">
+  <div class="row g-3">
+
+    <!-- 中间：交流群列表 -->
+    <div class="col-lg-8">
+      <div class="bg-white rounded shadow-sm overflow-hidden">
+        <div class="d-flex align-items-center border-bottom px-3 py-2">
+          <i class="bi bi-people-fill me-2 text-primary"></i>
+          <h6 class="mb-0 fw-bold">交流群</h6>
+          <small class="text-muted ms-2">加入社区交流群，和开发者们一起讨论</small>
+        </div>
+
+        <!-- 分类筛选 -->
+        <div class="border-bottom px-3 py-2 d-flex flex-wrap gap-2">
+          <%= link_to "全部", chat_groups_path, class: "btn btn-sm rounded-pill #{params[:category].blank? ? 'btn-primary' : 'btn-outline-secondary'}" %>
+          <% @categories.each do |key, label| %>
+            <%= link_to label, chat_groups_path(category: key), class: "btn btn-sm rounded-pill #{params[:category] == key.to_s ? 'btn-primary' : 'btn-outline-secondary'}" %>
+          <% end %>
+        </div>
+
+        <!-- 交流群列表 -->
+        <div class="p-3">
+          <% if @chat_groups.present? %>
+            <% @chat_groups.each do |category, groups| %>
+              <h6 class="text-muted fw-semibold mb-3" style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px;">
+                <i class="bi bi-tag me-1"></i><%= ChatGroup::CATEGORIES[category] || category %>
+              </h6>
+              <div class="row g-3 mb-4">
+                <% groups.each do |group| %>
+                  <div class="col-md-6">
+                    <div class="card border h-100 rounded-3" style="transition:transform 0.2s">
+                      <div class="card-body p-3">
+                        <div class="d-flex align-items-start gap-3">
+                          <div class="flex-shrink-0">
+                            <% if group.logo.attached? %>
+                              <div class="rounded-3 overflow-hidden" style="width:56px;height:56px">
+                                <img src="<%= url_for(group.logo.variant(resize_to_fill: [112, 112])) %>" class="w-100 h-100" style="object-fit:cover" alt="<%= group.name %>">
+                              </div>
+                            <% else %>
+                              <div class="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width:56px;height:56px">
+                                <i class="bi bi-people-fill text-primary" style="font-size:1.3rem"></i>
+                              </div>
+                            <% end %>
+                          </div>
+                          <div class="flex-grow-1 min-w-0">
+                            <h6 class="fw-bold mb-1 text-truncate"><%= group.name %></h6>
+                            <div class="d-flex align-items-center gap-2 mb-1" style="font-size:0.78rem">
+                              <span class="badge bg-light text-dark rounded-pill"><i class="bi bi-person me-1"></i><%= group.members_count %> 人</span>
+                            </div>
+                            <% if group.description.present? %>
+                              <p class="text-muted mb-0" style="font-size:0.82rem; line-height:1.5"><%= truncate(group.description, length: 80) %></p>
+                            <% end %>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="text-center text-muted py-5" style="font-size:0.85rem">
+              <i class="bi bi-chat-square-text d-block mb-2" style="font-size:2rem"></i>
+              暂无交流群
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧栏 -->
+    <div class="col-lg-4">
+      <!-- 说明卡片 -->
+      <div class="sidebar-card mb-3">
+        <div class="card-header d-flex align-items-center">
+          <i class="bi bi-info-circle me-2 text-primary"></i>关于交流群
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-2" style="font-size:0.85rem; line-height:1.6">
+            加入 SoloDev.Cool 社区交流群，和志同道合的开发者一起讨论技术、分享经验、互相学习。
+          </p>
+          <ul class="text-muted list-unstyled mb-0" style="font-size:0.82rem; line-height:1.8">
+            <li><i class="bi bi-check-circle text-success me-1"></i>技术问题交流</li>
+            <li><i class="bi bi-check-circle text-success me-1"></i>项目经验分享</li>
+            <li><i class="bi bi-check-circle text-success me-1"></i>行业动态讨论</li>
+            <li><i class="bi bi-check-circle text-success me-1"></i>结交开发者朋友</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

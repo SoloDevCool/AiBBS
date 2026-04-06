@@ -1,0 +1,202 @@
+<% content_for :title, "外观设置" %>
+
+<h4 class="mb-4">
+  <i class="bi bi-palette me-2"></i>外观设置
+  <small class="text-muted fw-normal ms-2" style="font-size:0.85rem">自定义站点图标和 Logo</small>
+</h4>
+
+<%= form_with model: @appearance, url: admin_appearance_settings_path, method: :patch,
+              local: true, html: { multipart: true, id: "appearanceForm" } do |f| %>
+
+  <!-- Logo 展示方式 -->
+  <div class="card card-admin mb-4">
+    <div class="card-header d-flex align-items-center">
+      <i class="bi bi-layout-text-sidebar-reverse me-2 text-info"></i>
+      <span class="fw-semibold">Logo 展示方式</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3" style="font-size:0.85rem">
+        选择导航栏 Logo 的展示方式
+      </p>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-check-label d-block">
+            <div class="card h-100 border <%= @appearance.logo_display_mode == "text" ? "border-primary" : "" %>"
+                 style="cursor:pointer; transition: all 0.2s" onclick="selectLogoMode('text')">
+              <div class="card-body text-center py-3">
+                <div class="mb-2"><i class="bi bi-type-bold" style="font-size:1.5rem"></i></div>
+                <div class="fw-semibold" style="font-size:0.9rem">纯文字</div>
+                <div class="text-muted" style="font-size:0.8rem">仅显示站点名称文字</div>
+                <div class="mt-2 py-2 px-3 rounded bg-light d-inline-block" style="font-size:0.8rem">
+                  <i class="bi bi-terminal me-1"></i>SoloDev.Cool
+                </div>
+              </div>
+              <input type="radio" name="site_appearance[logo_display_mode]" value="text"
+                     class="form-check-input d-none" id="logoModeText"
+                     <%= "checked" if @appearance.logo_display_mode == "text" || @appearance.logo_display_mode.blank? %>>
+            </div>
+          </label>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-check-label d-block">
+            <div class="card h-100 border <%= @appearance.logo_display_mode == "logo" ? "border-primary" : "" %>"
+                 style="cursor:pointer; transition: all 0.2s" onclick="selectLogoMode('logo')">
+              <div class="card-body text-center py-3">
+                <div class="mb-2"><i class="bi bi-image" style="font-size:1.5rem"></i></div>
+                <div class="fw-semibold" style="font-size:0.9rem">Logo 图片</div>
+                <div class="text-muted" style="font-size:0.8rem">仅显示上传的 Logo 图片</div>
+                <div class="mt-2 py-2 px-3 rounded bg-light d-inline-block" style="font-size:0.8rem">
+                  <% if @appearance.logo.attached? %>
+                    <img src="<%= url_for(@appearance.logo) %>" style="max-height:24px;max-width:120px;object-fit:contain" alt="">
+                  <% else %>
+                    <span class="text-muted">Logo 预览</span>
+                  <% end %>
+                </div>
+              </div>
+              <input type="radio" name="site_appearance[logo_display_mode]" value="logo"
+                     class="form-check-input d-none" id="logoModeLogo"
+                     <%= "checked" if @appearance.logo_display_mode == "logo" %>>
+            </div>
+          </label>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-check-label d-block">
+            <div class="card h-100 border <%= @appearance.logo_display_mode == "icon_logo" ? "border-primary" : "" %>"
+                 style="cursor:pointer; transition: all 0.2s" onclick="selectLogoMode('icon_logo')">
+              <div class="card-body text-center py-3">
+                <div class="mb-2"><i class="bi bi-stack" style="font-size:1.5rem"></i></div>
+                <div class="fw-semibold" style="font-size:0.9rem">Logo + 文字</div>
+                <div class="text-muted" style="font-size:0.8rem">Logo 图片和站点名称同时显示</div>
+                <div class="mt-2 py-2 px-3 rounded bg-light d-inline-block" style="font-size:0.8rem">
+                  <% if @appearance.logo.attached? %>
+                    <img src="<%= url_for(@appearance.logo) %>" style="max-height:24px;max-width:120px;object-fit:contain" class="me-1" alt="">
+                  <% end %>
+                  SoloDev.Cool
+                </div>
+              </div>
+              <input type="radio" name="site_appearance[logo_display_mode]" value="icon_logo"
+                     class="form-check-input d-none" id="logoModeIconLogo"
+                     <%= "checked" if @appearance.logo_display_mode == "icon_logo" %>>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo 设置 -->
+  <div class="card card-admin mb-4">
+    <div class="card-header d-flex align-items-center">
+      <i class="bi bi-image me-2 text-primary"></i>
+      <span class="fw-semibold">站点 Logo</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3" style="font-size:0.85rem">
+        显示在导航栏左侧，建议尺寸 <strong>120×40</strong> 像素，支持 PNG / JPG / SVG，不超过 2MB
+      </p>
+
+      <div class="mb-3">
+        <div id="logoPreviewArea" class="border rounded-3 p-4 text-center bg-light"
+             style="min-height: 100px; display: <%= @appearance.logo.attached? ? 'block' : 'flex' %>;
+                    align-items: center; justify-content: center;">
+          <% if @appearance.logo.attached? %>
+            <img src="<%= url_for(@appearance.logo) %>" alt="Logo 预览"
+                 style="max-height: 60px; max-width: 300px; object-fit: contain;">
+          <% else %>
+            <div>
+              <i class="bi bi-cloud-upload text-muted" style="font-size: 2rem"></i>
+              <p class="text-muted mt-2 mb-0" style="font-size:0.85rem">暂未上传 Logo</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <%= f.file_field :logo, class: "form-control", style: "max-width: 360px",
+                         accept: "image/png,image/jpeg,image/gif,image/webp,image/svg+xml",
+                         onchange: "previewImage(this, 'logoPreviewArea', 'logoPreviewImg', 60, 300)" %>
+        <% if @appearance.logo.attached? %>
+          <label class="form-check-label d-flex align-items-center gap-1 text-danger" style="font-size:0.85rem; cursor:pointer">
+            <%= check_box_tag "appearance[remove_logo]", "1", false, class: "form-check-input" %>
+            删除当前 Logo
+          </label>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Favicon 设置 -->
+  <div class="card card-admin mb-4">
+    <div class="card-header d-flex align-items-center">
+      <i class="bi bi-app-indicator me-2 text-warning"></i>
+      <span class="fw-semibold">站点图标（Favicon）</span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3" style="font-size:0.85rem">
+        显示在浏览器标签页上，建议使用 <strong>正方形</strong> 图片（如 64×64、128×128 或 512×512），支持 PNG / SVG / ICO，不超过 1MB
+      </p>
+
+      <div class="mb-3">
+        <div id="faviconPreviewArea" class="border rounded-3 p-4 text-center bg-light"
+             style="min-height: 100px; display: <%= @appearance.favicon.attached? ? 'block' : 'flex' %>;
+                    align-items: center; justify-content: center;">
+          <% if @appearance.favicon.attached? %>
+            <img src="<%= url_for(@appearance.favicon) %>" alt="Favicon 预览"
+                 style="height: 64px; width: 64px; object-fit: contain;">
+          <% else %>
+            <div>
+              <i class="bi bi-cloud-upload text-muted" style="font-size: 2rem"></i>
+              <p class="text-muted mt-2 mb-0" style="font-size:0.85rem">暂未上传图标</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <%= f.file_field :favicon, class: "form-control", style: "max-width: 360px",
+                         accept: "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon",
+                         onchange: "previewImage(this, 'faviconPreviewArea', 'faviconPreviewImg', 64, 64)" %>
+        <% if @appearance.favicon.attached? %>
+          <label class="form-check-label d-flex align-items-center gap-1 text-danger" style="font-size:0.85rem; cursor:pointer">
+            <%= check_box_tag "appearance[remove_favicon]", "1", false, class: "form-check-input" %>
+            删除当前图标
+          </label>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <%= f.submit "保存设置", class: "btn btn-primary px-4" %>
+    <%= link_to "取消", admin_appearance_settings_path, class: "btn btn-outline-secondary" %>
+  </div>
+<% end %>
+
+<script>
+function selectLogoMode(mode) {
+  document.getElementById('logoModeText').checked = (mode === 'text');
+  document.getElementById('logoModeLogo').checked = (mode === 'logo');
+  document.getElementById('logoModeIconLogo').checked = (mode === 'icon_logo');
+  document.querySelectorAll('[onclick^="selectLogoMode"]').forEach(function(el) {
+    el.classList.remove('border-primary');
+  });
+  event.currentTarget.classList.add('border-primary');
+}
+
+function previewImage(input, areaId, imgClass, maxH, maxW) {
+  const area = document.getElementById(areaId);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      area.style.display = 'block';
+      area.style.alignItems = 'center';
+      area.style.justifyContent = 'center';
+      area.innerHTML = '<img src="' + e.target.result + '" style="max-height:' + maxH + 'px;max-width:' + maxW + 'px;object-fit:contain;" alt="预览">';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>

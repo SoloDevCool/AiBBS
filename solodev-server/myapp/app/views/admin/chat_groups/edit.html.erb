@@ -1,0 +1,77 @@
+<h4 class="text-dark fw-bold mb-4">编辑交流群</h4>
+
+<div class="card card-admin" style="max-width:640px">
+  <div class="card-body p-4">
+    <%= form_with model: [:admin, @chat_group], local: true do |f| %>
+      <% if @chat_group.errors.any? %>
+        <div class="alert alert-danger rounded-3 py-2">
+          <i class="bi bi-exclamation-circle me-1"></i>
+          <ul class="mb-0 ms-3">
+            <% @chat_group.errors.full_messages.each do |msg| %>
+              <li><%= msg %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="mb-3">
+        <%= f.label :name, "群名称", class: "form-label fw-semibold small text-muted" %>
+        <%= f.text_field :name, class: "form-control form-control-lg rounded-3", placeholder: "例如：SoloDev 技术交流群" %>
+      </div>
+
+      <div class="mb-3">
+        <%= f.label :category, "分类", class: "form-label fw-semibold small text-muted" %>
+        <%= f.select :category, ChatGroup::CATEGORIES.map { |k, v| [v, k] }, { prompt: "请选择分类" }, class: "form-select form-select-lg rounded-3" %>
+      </div>
+
+      <div class="mb-3">
+        <%= f.label :members_count, "群人数", class: "form-label fw-semibold small text-muted" %>
+        <%= f.number_field :members_count, class: "form-control form-control-lg rounded-3", placeholder: "例如：500", min: 0 %>
+        <div class="form-text">当前群成员人数</div>
+      </div>
+
+      <div class="mb-3">
+        <%= f.label :logo, "群 Logo", class: "form-label fw-semibold small text-muted" %>
+        <% if @chat_group.logo.attached? %>
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="rounded-2 overflow-hidden" style="width:64px;height:64px">
+              <img src="<%= url_for(@chat_group.logo.variant(resize_to_fill: [128, 128])) %>" class="w-100 h-100" style="object-fit:cover" alt="">
+            </div>
+            <label class="form-check">
+              <input type="checkbox" name="chat_group[remove_logo]" value="1" class="form-check-input">
+              <span class="form-check-label" style="font-size:0.85rem">删除 Logo</span>
+            </label>
+          </div>
+        <% end %>
+        <%= f.file_field :logo, class: "form-control form-control-lg rounded-3", accept: "image/*" %>
+        <div class="form-text">建议上传正方形图片，推荐 200x200 像素</div>
+      </div>
+
+      <div class="mb-3">
+        <%= f.label :description, "备注", class: "form-label fw-semibold small text-muted" %>
+        <%= f.text_area :description, class: "form-control rounded-3", rows: 3, placeholder: "群的简要说明或入群须知..." %>
+        <div class="form-text">最多 500 个字符</div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <%= f.label :sort_order, "排序", class: "form-label fw-semibold small text-muted" %>
+          <%= f.number_field :sort_order, class: "form-control form-control-lg rounded-3", min: 0 %>
+          <div class="form-text">数字越小越靠前</div>
+        </div>
+        <div class="col-md-6">
+          <%= f.label :is_active, "状态", class: "form-label fw-semibold small text-muted" %>
+          <div class="form-check form-switch mt-2">
+            <%= f.check_box :is_active, class: "form-check-input", style: "width:2.5em;height:1.5em" %>
+            <label class="form-check-label" for="chat_group_is_active">在前台显示</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <%= f.submit "保存修改", class: "btn btn-primary rounded-pill px-4" %>
+        <%= link_to "取消", admin_chat_groups_path, class: "btn btn-outline-secondary rounded-pill px-4" %>
+      </div>
+    <% end %>
+  </div>
+</div>

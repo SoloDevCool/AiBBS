@@ -1,0 +1,109 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="text-center mb-4">忘记密码</h2>
+          <p class="text-center text-muted mb-4" style="font-size:0.9rem">输入注册邮箱，通过验证后即可重置密码</p>
+
+          <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post, class: "needs-validation" }) do |f| %>
+            <%= render "devise/shared/error_messages", resource: resource %>
+
+            <div class="mb-3">
+              <%= f.label :email, "邮箱", class: "form-label" %>
+              <div class="input-group">
+                <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "form-control", placeholder: "请输入注册邮箱", id: "reset_email" %>
+                <button type="button" class="btn btn-outline-secondary" id="sendResetCodeBtn" onclick="sendResetVerificationCode()">发送验证码</button>
+              </div>
+              <div class="form-text" id="resetEmailHint"></div>
+            </div>
+
+            <% if EmailVerificationService.enabled? %>
+              <div class="mb-3">
+                <label class="form-label">邮箱验证码</label>
+                <input type="text" name="user[verification_code]" id="user_verification_code" class="form-control" placeholder="请输入6位验证码" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+              </div>
+            <% end %>
+
+            <div class="d-grid">
+              <%= f.submit "提交验证并重置密码", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+
+          <hr>
+          <%= render "devise/shared/links" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function sendResetVerificationCode() {
+    var emailInput = document.getElementById('reset_email');
+    var btn = document.getElementById('sendResetCodeBtn');
+    var hintDiv = document.getElementById('resetEmailHint');
+    var email = emailInput.value.trim();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      hintDiv.textContent = '请输入有效的邮箱地址';
+      hintDiv.classList.remove('text-success');
+      hintDiv.classList.add('text-danger');
+      emailInput.classList.add('is-invalid');
+      return;
+    }
+
+    emailInput.classList.remove('is-invalid');
+    hintDiv.textContent = '';
+    btn.disabled = true;
+    btn.textContent = '发送中...';
+
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    fetch('<%= send_password_reset_code_path(format: :json) %>', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({ email: email })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (data.success) {
+        startResetCountdown(btn, 60);
+        hintDiv.classList.remove('text-danger');
+        hintDiv.classList.add('text-success');
+        hintDiv.textContent = data.message;
+      } else {
+        btn.disabled = false;
+        btn.textContent = '发送验证码';
+        hintDiv.classList.remove('text-success');
+        hintDiv.classList.add('text-danger');
+        hintDiv.textContent = data.message;
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = '发送验证码';
+      hintDiv.classList.remove('text-success');
+      hintDiv.classList.add('text-danger');
+      hintDiv.textContent = '网络请求失败，请稍后重试';
+    });
+  }
+
+  function startResetCountdown(btn, seconds) {
+    var remaining = seconds;
+    btn.disabled = true;
+    btn.textContent = remaining + 's 后重发';
+    var timer = setInterval(function() {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(timer);
+        btn.disabled = false;
+        btn.textContent = '发送验证码';
+      } else {
+        btn.textContent = remaining + 's 后重发';
+      }
+    }, 1000);
+  }
+</script>

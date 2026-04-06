@@ -1,0 +1,36 @@
+{
+  "name": "<%= SiteSetting.get("seo_site_name", default: "SoloDev.Cool") %>",
+  "icons": [
+    <% if site_favicon_url %>
+    {
+      "src": "<%= site_favicon_url %>",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "<%= site_favicon_url %>",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+    <% else %>
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+    <% end %>
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "description": "<%= SiteSetting.get("seo_description", default: "SoloDev.Cool 独立开发者社区") %>",
+  "theme_color": "red",
+  "background_color": "red"
+}

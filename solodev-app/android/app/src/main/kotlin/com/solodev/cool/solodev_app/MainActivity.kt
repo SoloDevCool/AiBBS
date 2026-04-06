@@ -1,0 +1,5 @@
+package com.solodev.cool.solodev_app
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

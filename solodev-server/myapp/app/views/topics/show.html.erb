@@ -1,0 +1,1234 @@
+<% content_for :title, "#{@topic.title} - SoloDev.Cool" %>
+<% content_for :head do %>
+  <%= seo_meta_tags(title: "#{@topic.title} - SoloDev.Cool", description: @topic.content.truncate(160), keywords: @topic.node&.name, url: topic_url(@topic), type: "article") %>
+  <%= json_ld_breadcrumb([{ name: "首页", url: root_url }, { name: "社区", url: topics_url }, { name: @topic.title, url: topic_url(@topic) }]) %>
+  <%= json_ld_article(@topic) %>
+  <meta name="robots" content="index, follow">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<% end %>
+
+<div class="container-lg py-3">
+  <div class="row g-3">
+
+    <!-- 左侧节点列表 -->
+    <div class="col-lg-2 left-sidebar">
+      <div class="node-list">
+        <a href="<%= topics_path %>" class="node-item">
+          <span class="node-icon"><i class="bi bi-grid"></i></span>
+          <span>全部</span>
+          <span class="node-count"><%= Topic.count %></span>
+        </a>
+        <% {"system" => "system", "interest" => "interest"}.each do |order_key, kind| %>
+          <% nodes = @all_nodes.select { |n| n.kind == kind } %>
+          <% next if nodes.empty? %>
+          <h6 class="d-flex align-items-center justify-content-between text-muted mb-1 mt-3 ps-2" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px;">
+            <span>
+              <i class="bi <%= kind == 'system' ? 'bi-gear' : 'bi-star' %> me-1"></i><%= Node.kinds_i18n[kind.to_sym] %>
+            </span>
+            <% if kind == "interest" %>
+              <%= link_to topics_path(kind: kind), class: "text-decoration-none text-muted", style: "font-size:0.7rem; text-transform:none; letter-spacing:0" do %>全部<% end %>
+            <% end %>
+          </h6>
+          <% if kind == "interest" %>
+            <% if user_signed_in? %>
+              <% if @sidebar_followed_nodes.present? %>
+                <% @sidebar_followed_nodes.each do |node| %>
+                  <a href="<%= node_topics_path(node) %>" class="node-item <%= node == @topic.node ? 'active' : '' %>">
+                    <span class="node-icon"><%= node.icon.presence || "📄" %></span>
+                    <span><%= node.name %></span>
+                    <span class="node-count"><%= node.topics_count %></span>
+                  </a>
+                <% end %>
+              <% else %>
+                <div class="text-muted text-center py-2" style="font-size:0.78rem">
+                  <a href="<%= topics_path(kind: 'interest') %>" class="text-decoration-none">去发现节点</a>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="text-muted text-center py-2" style="font-size:0.78rem">
+                <a href="<%= new_user_session_path %>" class="text-decoration-none">登录后查看</a>
+              </div>
+            <% end %>
+          <% else %>
+            <% nodes.each do |node| %>
+              <a href="<%= node_topics_path(node) %>" class="node-item <%= node == @topic.node ? 'active' : '' %>">
+                <span class="node-icon"><%= node.icon.presence || "📄" %></span>
+                <span><%= node.name %></span>
+                <span class="node-count"><%= node.topics_count %></span>
+              </a>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- 中间：主题内容 -->
+    <div class="col-lg-7">
+      <div class="bg-white rounded shadow-sm overflow-hidden">
+        <!-- 顶部导航 -->
+        <div class="d-flex align-items-center border-bottom px-3 py-2">
+          <% back_url = if request.referer&.include?("/nodes/") && request.referer&.include?("/topics")
+                          node_topics_path(@topic.node)
+                        else
+                          topics_path
+                        end %>
+          <%= link_to back_url, class: "btn btn-sm btn-outline-secondary me-2" do %>
+            <i class="bi bi-arrow-left me-1"></i>返回
+          <% end %>
+          <%= link_to node_topics_path(@topic.node), class: "btn btn-sm btn-outline-primary text-truncate" do %>
+            <%= @topic.node.icon %> <%= @topic.node.name %>
+          <% end %>
+          <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="generatePoster()" title="生成长图">
+            <i class="bi bi-image me-1"></i>长图
+          </button>
+          <% if can_manage_topic?(@topic) || current_user&.admin? %>
+            <div class="ms-auto d-flex gap-1">
+              <% if current_user&.admin? %>
+                <% if @topic.pinned? %>
+                  <%= button_to unpin_topic_path(@topic), method: :post, class: "btn btn-sm btn-outline-warning rounded-pill px-2",
+                      data: { confirm: "确定取消置顶？" } do %>
+                    <i class="bi bi-pin-angle me-1"></i>取消置顶
+                  <% end %>
+                <% else %>
+                  <%= button_to pin_topic_path(@topic), method: :post, class: "btn btn-sm btn-outline-warning rounded-pill px-2",
+                      data: { confirm: "确定置顶此主题？" } do %>
+                    <i class="bi bi-pin-angle-fill me-1"></i>置顶
+                  <% end %>
+                <% end %>
+              <% end %>
+              <% if can_manage_topic?(@topic) %>
+                <%= link_to edit_topic_path(@topic), class: "btn btn-sm btn-outline-secondary rounded-pill px-2" do %>
+                  <i class="bi bi-pencil"></i>
+                <% end %>
+                <%= button_to topic_path(@topic.id), method: :delete, class: "btn btn-sm btn-outline-danger rounded-pill px-2",
+                    data: { confirm: "确定删除此主题吗？" } do %>
+                  <i class="bi bi-trash"></i>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- 主题详情 -->
+        <div class="p-4">
+          <h5 class="fw-bold mb-3"><%= @topic.title %></h5>
+
+          <% if @topic.pinned? %>
+            <div class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center" style="font-size:0.82rem">
+              <i class="bi bi-pin-angle-fill me-2"></i>该主题已被管理员置顶
+            </div>
+          <% end %>
+
+          <!-- 作者信息 -->
+          <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+            <% user_link = @topic.user == current_user ? profile_path : (@topic.user.profile_public? ? user_path(@topic.user) : nil) %>
+            <% tag = user_link ? :a : :div %>
+            <% link_opts = user_link ? { href: user_link, class: "d-flex align-items-center text-decoration-none flex-grow-1" } : { class: "d-flex align-items-center flex-grow-1", data: { bs_toggle: "popover", bs_placement: "top", bs_content: "该用户已设置隐私，主页不公开", bs_trigger: "focus click" }, tabindex: "0", role: "button" } %>
+            <%= content_tag tag, **link_opts do %>
+              <% if @topic.user.has_avatar? %>
+                <div class="rounded-3 me-2 flex-shrink-0 overflow-hidden" style="width:36px;height:36px">
+                  <img src="<%= @topic.user.avatar_data_url %>" class="w-100 h-100" style="object-fit:cover" alt="">
+                </div>
+              <% else %>
+                <div class="rounded-3 bg-avatar-<%= @topic.user.id % 5 + 1 %> d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:36px;height:36px;color:#fff;font-weight:600;font-size:0.85rem">
+                  <%= user_initial(@topic.user) %>
+                </div>
+              <% end %>
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-semibold" style="font-size:0.9rem;color:var(--text-primary)"><%= @topic.user.display_name %></span>
+                  <span class="badge bg-light text-secondary rounded-pill" style="font-size:0.7rem">
+                    <i class="bi bi-people me-1"></i><%= @topic.user.followers.count %>
+                  </span>
+                </div>
+                <div class="text-muted" style="font-size:0.78rem">
+                  <%= @topic.created_at.strftime("%Y-%m-%d %H:%M") %> &middot;
+                  <i class="bi bi-eye me-1"></i><%= @topic.views_count %> 次浏览 &middot;
+                  <i class="bi bi-chat-dots me-1"></i><%= @comments.count %> 条评论 &middot;
+                  <i class="bi bi-snow me-1"></i><%= @topic.cools_count %> cool
+                </div>
+              </div>
+            <% end %>
+            <% if user_signed_in? && current_user != @topic.user %>
+              <% if @topic.user.blocked?(current_user) %>
+                <%= button_to unblock_user_path(@topic.user), method: :delete, class: "btn btn-sm btn-outline-secondary rounded-pill px-3 flex-shrink-0" do %>
+                  <i class="bi bi-unlock me-1"></i>取消屏蔽
+                <% end %>
+              <% elsif @topic.user.followed_by?(current_user) %>
+                <%= button_to unfollow_user_path(@topic.user), method: :delete, class: "btn btn-sm btn-outline-secondary rounded-pill px-3 flex-shrink-0" do %>
+                  <i class="bi bi-person-check me-1"></i>已关注
+                <% end %>
+              <% else %>
+                <%= button_to follow_user_path(@topic.user), method: :post, class: "btn btn-sm btn-primary rounded-pill px-3 flex-shrink-0" do %>
+                  <i class="bi bi-person-plus me-1"></i>关注
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
+
+          <!-- 投票区域 -->
+          <% if @poll.present? %>
+            <div class="poll-section mb-3 p-3 rounded-3 border" id="poll-section">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line me-2 text-primary"></i>投票</h6>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-muted small"><i class="bi bi-people me-1"></i><span id="poll-total-votes"><%= @poll.total_votes %></span> 人参与</span>
+                  <% if can_manage_topic?(@topic) %>
+                    <% if @poll.closed? %>
+                      <%= button_to open_topic_poll_path(@topic), method: :post, class: "btn btn-sm btn-outline-success rounded-pill px-2", style: "font-size:0.72rem" do %>
+                        <i class="bi bi-play-circle me-1"></i>开启
+                      <% end %>
+                    <% else %>
+                      <%= button_to close_topic_poll_path(@topic), method: :post, class: "btn btn-sm btn-outline-secondary rounded-pill px-2", style: "font-size:0.72rem" do %>
+                        <i class="bi bi-stop-circle me-1"></i>关闭
+                      <% end %>
+                      <%= button_to topic_poll_path(@topic), method: :delete, class: "btn btn-sm btn-outline-danger rounded-pill px-2", style: "font-size:0.72rem", data: { confirm: "确定删除投票？" } do %>
+                        <i class="bi bi-trash"></i>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+              <% if @poll.closed? %>
+                <div class="alert alert-secondary py-1 px-2 mb-2" style="font-size:0.75rem"><i class="bi bi-lock me-1"></i>投票已结束</div>
+              <% end %>
+              <div id="poll-options-container">
+                <% @poll.poll_options.each_with_index do |option, idx| %>
+                  <% voted_option = @poll.voted_option_for(current_user) %>
+                  <% has_voted = @poll.voted_by?(current_user) || @poll.closed? %>
+                  <div class="poll-option mb-2 <%= has_voted && option == voted_option ? 'poll-option-selected' : '' %>"
+                       data-option-id="<%= option.id %>" data-voted="<%= has_voted ? 'true' : 'false' %>"
+                       onclick="handlePollVote(this, <%= @topic.id %>, <%= option.id %>)">
+                    <div class="poll-option-label">
+                      <span class="poll-option-letter"><%= ('A'..'Z').to_a[idx] %></span>
+                      <span class="poll-option-title"><%= option.title %></span>
+                      <% if has_voted && option == voted_option %>
+                        <i class="bi bi-check-circle-fill poll-option-check"></i>
+                      <% end %>
+                    </div>
+                    <% if has_voted %>
+                      <div class="poll-option-bar">
+                        <div class="poll-option-bar-fill" style="width:<%= option.vote_percentage %>%"></div>
+                      </div>
+                      <div class="poll-option-meta">
+                        <span><%= option.vote_percentage %>%</span>
+                        <span><%= option.votes_count %> 票</span>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+              <% if !user_signed_in? %>
+                <div class="text-center mt-2">
+                  <%= link_to "登录后投票", new_user_session_path, class: "btn btn-sm btn-outline-primary rounded-pill px-3" %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+
+          <!-- 正文 -->
+          <textarea id="topic-content-raw" style="display:none"><%= @topic.content %></textarea>
+          <div id="topic-content-rendered" class="markdown-body lh-lg" style="font-size:0.95rem"></div>
+        </div>
+
+        <!-- Cool 按钮 -->
+        <div class="border-top px-4 py-3 d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <% if @topic.is_repost? && @topic.source_url.present? %>
+              <span class="badge bg-warning text-dark" style="font-size:0.72rem;font-weight:500"><i class="bi bi-arrow-repeat me-1"></i>转载</span>
+              <%= link_to @topic.source_url, target: "_blank", rel: "noopener noreferrer", class: "text-decoration-none", style: "font-size:0.8rem;color:var(--primary)" do %>
+                <i class="bi bi-box-arrow-up-right me-1"></i>查看原文
+              <% end %>
+            <% else %>
+              <span class="badge bg-success" style="font-size:0.72rem;font-weight:500"><i class="bi bi-pen me-1"></i>原创</span>
+            <% end %>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+          <% if user_signed_in? && current_user != @topic.user %>
+            <button type="button" class="btn btn-sm rounded-pill px-3 cool-btn <%= @topic.cooled_by?(current_user) ? 'cooled' : '' %>" id="cool-btn" data-topic-id="<%= @topic.id %>" data-cooled="<%= @topic.cooled_by?(current_user) ? 'true' : 'false' %>">
+              Cool <span id="cools-count"><%= @topic.cools_count %></span>
+            </button>
+          <% elsif current_user == @topic.user %>
+            <span class="text-muted" style="font-size:0.85rem"><i class="bi bi-snow me-1"></i><span id="cools-count"><%= @topic.cools_count %></span> 人觉得很 cool</span>
+          <% else %>
+            <span class="text-muted" style="font-size:0.85rem"><i class="bi bi-snow me-1"></i><span id="cools-count"><%= @topic.cools_count %></span> cool</span>
+          <% end %>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 评论区 -->
+      <div class="bg-white rounded shadow-sm overflow-hidden mt-3">
+        <div class="d-flex align-items-center border-bottom px-3 py-2">
+          <i class="bi bi-chat-dots me-2 text-muted"></i>
+          <h6 class="mb-0 fw-bold">评论 <span class="text-muted fw-normal" style="font-size:0.8rem">(<%= @comments.count %>)</span></h6>
+        </div>
+
+        <!-- 评论列表 -->
+        <div class="comment-list">
+          <% @comments.each do |comment| %>
+            <div class="d-flex gap-2 px-4 py-3 border-bottom">
+              <% if comment.user.has_avatar? %>
+                <div class="rounded-3 flex-shrink-0 overflow-hidden" style="width:32px;height:32px">
+                  <img src="<%= comment.user.avatar_data_url %>" class="w-100 h-100" style="object-fit:cover" alt="">
+                </div>
+              <% else %>
+                <div class="rounded-3 bg-avatar-<%= comment.user.id % 5 + 1 %> d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;color:#fff;font-weight:600;font-size:0.75rem">
+                  <%= user_initial(comment.user) %>
+                </div>
+              <% end %>
+              <div class="flex-grow-1">
+                <% if comment.login_only && !user_signed_in? %>
+                  <div class="d-flex align-items-center gap-2 mb-0">
+                    <span class="text-muted fw-semibold" style="font-size:0.85rem"><%= comment.user.display_name %></span>
+                    <span class="text-muted" style="font-size:0.72rem"><%= time_ago_in_words(comment.created_at) %>前</span>
+                  </div>
+                  <div class="text-muted py-2" style="font-size:0.85rem">
+                    <i class="bi bi-lock me-1"></i>该评论仅登录用户可见
+                    <span class="mx-1">·</span>
+                    <%= link_to "登录查看", new_user_session_path, class: "text-decoration-none", style: "color:var(--primary)" %>
+                  </div>
+                <% else %>
+                <% tip_total = Tip.total_amount_for(comment) %>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <%= link_to comment.user == current_user ? profile_path : user_path(comment.user), class: "fw-semibold text-decoration-none", style: "font-size:0.85rem;color:var(--text-primary)" do %>
+                    <%= comment.user.display_name %>
+                  <% end %>
+                  <span class="text-muted" style="font-size:0.72rem"><%= time_ago_in_words(comment.created_at) %>前</span>
+                  <div class="ms-auto d-flex gap-2 align-items-center">
+                    <% if user_signed_in? && comment.user != current_user %>
+                      <button type="button" class="btn btn-link p-0 comment-cool-btn <%= comment.comment_cools.exists?(user: current_user) ? 'cooled' : '' %>"
+                        style="font-size:0.72rem" data-comment-id="<%= comment.id %>" data-topic-id="<%= @topic.id %>"
+                        data-cooled="<%= comment.comment_cools.exists?(user: current_user) ? 'true' : 'false' %>"
+                        data-cools-count="<%= comment.comment_cools.count %>">
+                        Cool <span class="comment-cools-count"><%= comment.comment_cools.count %></span>
+                      </button>
+                    <% else %>
+                      <span class="text-muted" style="font-size:0.72rem">Cool <span class="comment-cools-count"><%= comment.comment_cools.count %></span></span>
+                    <% end %>
+                    <% if user_signed_in? && current_user == @topic.user && comment.user != current_user %>
+                      <button type="button" class="btn btn-link text-warning p-0 tip-trigger" style="font-size:0.72rem"
+                        data-comment-id="<%= comment.id %>" data-comment-user="<%= comment.user.display_name %>"
+                        data-topic-id="<%= @topic.id %>" data-current-points="<%= current_user.points %>"
+                        data-tip-total="<%= tip_total || 0 %>">
+                        <i class="bi bi-gift me-1"></i>打赏
+                      </button>
+                    <% end %>
+                    <% if user_signed_in? %>
+                      <button type="button" class="btn btn-link text-muted p-0" style="font-size:0.72rem" onclick="toggleReplyForm(this)">
+                        <i class="bi bi-reply me-1"></i>回复
+                      </button>
+                    <% end %>
+                    <% if comment.user == current_user || current_user&.admin? %>
+                      <%= button_to toggle_login_only_topic_comment_path(@topic, comment), method: :post, class: "btn btn-sm btn-link p-0 #{comment.login_only ? 'text-primary' : 'text-muted'}", style: "font-size:0.72rem", title: comment.login_only ? "取消仅登录可见" : "设为仅登录可见" do %>
+                        <i class="bi bi-eye-slash"></i>
+                      <% end %>
+                    <% elsif comment.login_only %>
+                      <span class="text-muted" style="font-size:0.72rem" title="仅登录用户可见"><i class="bi bi-eye-slash"></i></span>
+                    <% end %>
+                    <% if comment.user == current_user || current_user&.admin? %>
+                      <%= button_to topic_comment_path(@topic, comment), method: :delete, class: "btn btn-sm btn-link text-muted p-0", style: "font-size:0.72rem" do %>
+                        <i class="bi bi-trash"></i>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </div>
+
+                <% if comment.parent.present? %>
+                  <div class="comment-quote-block mb-2">
+                    <div class="comment-quote-header">
+                      <span class="text-primary fw-semibold" style="font-size:0.78rem">@<%= comment.parent.user.display_name %></span>
+                    </div>
+                    <div class="comment-quote-content"><%= truncate(comment.parent.content, length: 150) %></div>
+                  </div>
+                <% end %>
+
+                <div style="font-size:0.9rem; line-height:1.6"><%= render_mentions(comment.content) %></div>
+
+                <% if comment.login_only && user_signed_in? %>
+                  <div class="mt-1" style="font-size:0.72rem;color:var(--text-secondary)">
+                    <i class="bi bi-eye-slash me-1"></i>仅登录用户可见
+                  </div>
+                <% end %>
+
+                <!-- 打赏信息 -->
+                <% if tip_total > 0 %>
+                  <div class="tip-info mt-1">
+                    <span class="tip-badge"><i class="bi bi-gift me-1"></i>已获打赏 <strong><%= tip_total %></strong> 酷能量</span>
+                  </div>
+                <% end %>
+
+                <!-- 回复表单 -->
+                <% if user_signed_in? %>
+                  <div class="reply-form mt-2" style="display:none">
+                    <%= form_with(model: [@topic, Comment.new], url: topic_comments_path(@topic), local: true, class: "mb-0") do |f| %>
+                      <%= f.hidden_field :parent_id, value: comment.id %>
+                      <div class="comment-quote-block mb-2">
+                        <div class="comment-quote-header">
+                          <span class="text-primary fw-semibold" style="font-size:0.78rem">@<%= comment.user.display_name %></span>
+                        </div>
+                        <div class="comment-quote-content"><%= truncate(comment.content, length: 150) %></div>
+                      </div>
+                      <div class="mb-2">
+                        <%= f.text_area :content, rows: 2, class: "form-control form-control-sm", placeholder: "写下你的回复...", style: "font-size:0.85rem;resize:none" %>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div class="form-check mb-0">
+                          <%= f.check_box :login_only, class: "form-check-input", style: "cursor:pointer" %>
+                          <label class="form-check-label" style="font-size:0.78rem;cursor:pointer" for="comment_login_only">
+                            <i class="bi bi-eye-slash me-1"></i>仅登录可见
+                          </label>
+                        </div>
+                        <div class="d-flex gap-2">
+                          <button type="button" class="btn btn-sm btn-light" onclick="cancelReply(this)">取消</button>
+                          <%= f.submit "回复", class: "btn btn-primary btn-sm" %>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+          <% if @comments.empty? %>
+            <div class="text-center text-muted py-5" style="font-size:0.85rem">
+              <i class="bi bi-chat-square-text d-block mb-2" style="font-size:1.5rem"></i>
+              暂无评论，来说两句吧
+            </div>
+          <% end %>
+        </div>
+
+        <!-- 评论表单 -->
+        <% if user_signed_in? %>
+          <div class="border-top px-4 py-3">
+            <%= form_with(model: [@topic, Comment.new], local: true, class: "mb-0") do |f| %>
+              <div class="mb-2">
+                <%= f.text_area :content, id: "new-comment-input", rows: 3, class: "form-control form-control-sm", placeholder: "写下你的评论... 使用 @username 提及用户", style: "resize:none" %>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="form-check mb-0">
+                  <%= f.check_box :login_only, class: "form-check-input", style: "cursor:pointer" %>
+                  <label class="form-check-label" style="font-size:0.8rem;cursor:pointer" for="comment_login_only">
+                    <i class="bi bi-eye-slash me-1"></i>仅登录用户可见
+                  </label>
+                </div>
+                <%= f.submit "发表评论", class: "btn btn-primary btn-sm rounded-pill px-3" %>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="border-top px-4 py-3 text-center">
+            <%= link_to "登录后评论", new_user_session_path, class: "btn btn-sm btn-outline-primary rounded-pill px-3" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- 右侧栏 -->
+    <div class="col-lg-3 right-sidebar">
+      <!-- 用户卡片 -->
+      <div class="sidebar-card user-card mb-3">
+        <div class="card-header-bg"></div>
+        <div class="card-body text-center pb-0">
+          <div class="avatar-wrapper">
+            <% if user_signed_in? %>
+              <%= link_to profile_path, class: "d-block" do %>
+                <div class="user-avatar bg-avatar-1">
+                  <% if current_user.has_avatar? %>
+                    <img src="<%= current_user.avatar_data_url %>" class="rounded-3 w-100 h-100" style="object-fit:cover" alt="头像">
+                  <% else %>
+                    <%= user_initial(current_user) %>
+                  <% end %>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="user-avatar bg-avatar-1">
+                <i class="bi bi-person" style="font-size:1.5rem"></i>
+              </div>
+            <% end %>
+          </div>
+          <div class="user-name">
+            <% if user_signed_in? %>
+              <%= link_to profile_path, class: "text-decoration-none text-dark" do %>
+                <%= current_user.display_name %>
+              <% end %>
+              <span class="badge <%= current_user.admin? ? 'bg-warning text-dark' : 'bg-info' %> user-role-badge" style="font-size:0.6rem">
+                <%= current_user.role_label %>
+              </span>
+            <% else %>
+              游客
+            <% end %>
+          </div>
+          <div class="user-stats-row">
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <%= link_to topics_path(scope: "mine"), class: "text-decoration-none" do %>
+                  <div class="user-stat-value"><%= current_user.topics.count %></div>
+                  <div class="user-stat-label">主题</div>
+                <% end %>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">主题</div>
+              <% end %>
+            </div>
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <%= link_to profile_path(tab: "following"), class: "text-decoration-none" do %>
+                  <div class="user-stat-value"><%= current_user.following.count %></div>
+                  <div class="user-stat-label">已关注</div>
+                <% end %>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">已关注</div>
+              <% end %>
+            </div>
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <%= link_to profile_path(tab: "followers"), class: "text-decoration-none" do %>
+                  <div class="user-stat-value"><%= current_user.followers.count %></div>
+                  <div class="user-stat-label">粉丝</div>
+                <% end %>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">粉丝</div>
+              <% end %>
+            </div>
+            <div class="user-stat">
+              <% if user_signed_in? %>
+                <div class="user-stat-value"><%= current_user.points %></div>
+                <div class="user-stat-label">酷能量</div>
+              <% else %>
+                <div class="user-stat-value">0</div>
+                <div class="user-stat-label">酷能量</div>
+              <% end %>
+            </div>
+          </div>
+          <% if user_signed_in? %>
+          <div class="text-center px-3">
+            <%= link_to new_topic_path, class: "btn btn-primary rounded-3 w-100 mt-3 mb-3" do %>
+              <i class="bi bi-plus-lg me-1"></i>创建主题
+            <% end %>
+          </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- 热门节点 -->
+      <div class="sidebar-card">
+        <div class="card-header d-flex align-items-center">
+          <i class="bi bi-fire text-danger me-2"></i>热门节点
+        </div>
+        <div class="card-body p-0">
+          <% @hot_nodes.each do |node| %>
+            <a href="<%= node_topics_path(node) %>" class="hot-item d-flex align-items-center">
+              <span class="me-2"><%= node.icon.presence || "📄" %></span>
+              <span class="text-truncate flex-grow-1"><%= node.name %></span>
+              <span class="badge bg-light text-dark rounded-pill flex-shrink-0 ms-1" style="font-size:0.7rem"><%= node.topics_count %></span>
+            </a>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- 同节点更多主题 -->
+      <% related = @topic.node.topics.recent.where.not(id: @topic.id).limit(5) %>
+      <% unless related.empty? %>
+      <div class="sidebar-card mt-3">
+        <div class="card-header d-flex align-items-center">
+          <i class="bi bi-collection me-2 text-primary"></i><%= @topic.node.name %> 更多主题
+        </div>
+        <div class="card-body p-0">
+          <% related.each do |t| %>
+            <a href="<%= topic_path(t) %>" class="hot-item d-flex align-items-center">
+              <span class="text-truncate flex-grow-1"><%= truncate(t.title, length: 40) %></span>
+              <span class="text-muted flex-shrink-0 ms-1" style="font-size:0.7rem"><%= time_ago_in_words(t.created_at) %>前</span>
+            </a>
+          <% end %>
+        </div>
+      </div>
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+<style>
+/* Poll styles */
+.poll-section{background:#f8fafc;border-color:#e2e8f0!important}
+[data-bs-theme="dark"] .poll-section{background:#1e293b;border-color:#334155!important}
+.poll-option{border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+[data-bs-theme="dark"] .poll-option{border-color:#475569}
+.poll-option:hover{border-color:#7dd3fc;background:#f0f9ff}
+[data-bs-theme="dark"] .poll-option:hover{border-color:#155e75;background:#164e63}
+.poll-option-selected{border-color:#0ea5e9!important;background:#f0f9ff!important}
+[data-bs-theme="dark"] .poll-option-selected{border-color:#0ea5e9!important;background:#164e63!important}
+.poll-option-label{display:flex;align-items:center;gap:8px;position:relative;z-index:1;margin-bottom:4px}
+.poll-option-letter{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#e2e8f0;color:#475569;font-size:0.75rem;font-weight:600;flex-shrink:0}
+[data-bs-theme="dark"] .poll-option-letter{background:#334155;color:#cbd5e1}
+.poll-option-selected .poll-option-letter{background:#0ea5e9;color:#fff}
+.poll-option-title{flex-grow:1;font-size:0.88rem;font-weight:500;color:var(--text-primary)}
+.poll-option-check{color:#0ea5e9;font-size:1rem;flex-shrink:0}
+.poll-option-bar{height:6px;background:#e2e8f0;border-radius:3px;margin:6px 0;overflow:hidden}
+[data-bs-theme="dark"] .poll-option-bar{background:#334155}
+.poll-option-bar-fill{height:100%;background:linear-gradient(90deg,#0ea5e9,#38bdf8);border-radius:3px;transition:width .5s ease}
+.poll-option-selected .poll-option-bar-fill{background:linear-gradient(90deg,#0284c7,#0ea5e9)}
+.poll-option-meta{display:flex;justify-content:space-between;font-size:0.72rem;color:#64748b}
+[data-bs-theme="dark"] .poll-option-meta{color:#94a3b8}
+button.btn.cool-btn{background-color:#f1f5f9!important;color:#64748b!important;border:1px solid #e2e8f0!important;transition:all .2s;-webkit-tap-highlight-color:transparent;outline:none!important;box-shadow:none!important}
+button.btn.cool-btn:hover{background-color:#e0f2fe!important;color:#0284c7!important;border-color:#7dd3fc!important}
+button.btn.cool-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent;box-shadow:none!important}
+button.btn.cool-btn:focus{outline:none!important;box-shadow:none!important}
+button.btn.cool-btn.cooled{background-color:#0ea5e9!important;color:#fff!important;border-color:#0ea5e9!important;outline:none!important;box-shadow:none!important}
+button.btn.cool-btn.cooled:hover{background-color:#0284c7!important;border-color:#0284c7!important}
+button.btn.cool-btn.cooled:active{box-shadow:none!important}
+button.btn.cool-btn.cooled:focus{box-shadow:none!important;outline:none!important}
+[data-bs-theme="dark"] button.btn.cool-btn{background-color:#334155!important;color:#e2e8f0!important;border-color:#475569!important}
+[data-bs-theme="dark"] button.btn.cool-btn:hover{background-color:#164e63!important;color:#38bdf8!important;border-color:#155e75!important}
+[data-bs-theme="dark"] button.btn.cool-btn.cooled{background-color:#0ea5e9!important;color:#fff!important;border-color:#0ea5e9!important}
+[data-bs-theme="dark"] button.btn.cool-btn.cooled:hover{background-color:#0284c7!important;border-color:#0284c7!important}
+.comment-quote-block{background-color:#f8f9fa;border-left:3px solid #dee2e6;border-radius:0 4px 4px 0;padding:8px 12px;font-size:0.82rem}
+.comment-quote-block .comment-quote-header{margin-bottom:2px}
+.comment-quote-block .comment-quote-content{color:#6c757d;line-height:1.5}
+[data-bs-theme="dark"] .comment-quote-block{background-color:#2d333b;border-left-color:#444c56}
+[data-bs-theme="dark"] .comment-quote-block .comment-quote-content{color:#8b949e}
+.tip-badge{font-size:0.72rem;color:#d97706;background:#fffbeb;padding:2px 8px;border-radius:12px;border:1px solid #fde68a}
+[data-bs-theme="dark"] .tip-badge{background:#451a03;color:#fbbf24;border-color:#78350f}
+.tip-trigger{transition:color .2s}
+.tip-trigger:hover{color:#f59e0b!important}
+button.btn.comment-cool-btn{color:#64748b!important;transition:color .2s}
+button.btn.comment-cool-btn:hover{color:#0284c7!important}
+button.btn.comment-cool-btn.cooled{color:#0ea5e9!important;font-weight:600}
+[data-bs-theme="dark"] button.btn.comment-cool-btn{color:#94a3b8!important}
+[data-bs-theme="dark"] button.btn.comment-cool-btn:hover{color:#38bdf8!important}
+[data-bs-theme="dark"] button.btn.comment-cool-btn.cooled{color:#38bdf8!important}
+.mention-link{color:#0ea5e9;text-decoration:none;font-weight:600}
+.mention-link:hover{color:#0284c7;text-decoration:underline}
+[data-bs-theme="dark"] .mention-link{color:#38bdf8}
+[data-bs-theme="dark"] .mention-link:hover{color:#0ea5e9}
+.registered-only-block{border:1px solid #e2e8f0;border-radius:8px;margin:12px 0;overflow:hidden;padding:12px 16px}
+[data-bs-theme="dark"] .registered-only-block{border-color:#334155}
+.registered-only-block .registered-only-block{border:none;margin:0;border-radius:0;padding:0}
+.registered-only-placeholder{padding:28px 20px;text-align:center;background:#f8fafc;margin:-12px -16px}
+[data-bs-theme="dark"] .registered-only-placeholder{background:#1e293b}
+.registered-only-placeholder-icon{font-size:1.5rem;color:#94a3b8;margin-bottom:8px}
+.registered-only-placeholder-text{color:#64748b;font-size:0.9rem;font-weight:500}
+[data-bs-theme="dark"] .registered-only-placeholder-text{color:#94a3b8}
+.registered-only-badge{display:inline-flex;align-items:center;gap:4px;background:#fef3c7;color:#92400e;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:12px;margin-bottom:8px;border:1px solid #fde68a}
+[data-bs-theme="dark"] .registered-only-badge{background:#451a03;color:#fbbf24;border-color:#78350f}
+</style>
+
+<!-- Poster Template (hidden, used for html2canvas) -->
+<div id="poster-wrapper" style="position:fixed;left:-9999px;top:0;z-index:-1;pointer-events:none">
+  <div id="poster-container" style="width:390px;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'PingFang SC','Microsoft YaHei',sans-serif;color:#333;line-height:1.6">
+    <!-- Header -->
+    <div style="padding:16px 20px;border-bottom:3px solid #0d6efd;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <i class="bi bi-terminal" style="font-size:1.2rem;color:#0d6efd"></i>
+        <span style="font-size:1rem;font-weight:700;color:#0d6efd">SoloDev.Cool</span>
+      </div>
+      <span style="font-size:0.75rem;color:#999"><%= @topic.node.icon %> <%= @topic.node.name %></span>
+    </div>
+
+    <!-- Topic Title -->
+    <div style="padding:20px 20px 0">
+      <div style="font-size:1.15rem;font-weight:700;color:#1a1a1a;line-height:1.5;word-break:break-word"><%= @topic.title %></div>
+      <% if @topic.pinned? %>
+        <div style="margin-top:8px;padding:6px 10px;background:#fff3cd;border-radius:6px;font-size:0.75rem;color:#856404">
+          <i class="bi bi-pin-angle-fill"></i> 该主题已被管理员置顶
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Author Info -->
+    <div style="padding:14px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f0f0f0">
+      <% if @topic.user.has_avatar? %>
+        <img src="<%= @topic.user.avatar_data_url %>" style="width:32px;height:32px;border-radius:6px;object-fit:cover" alt="">
+      <% else %>
+        <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:0.8rem;background:#6c757d">
+          <%= user_initial(@topic.user) %>
+        </div>
+      <% end %>
+      <div style="flex:1">
+        <div style="font-size:0.85rem;font-weight:600;color:#333"><%= @topic.user.display_name %></div>
+        <div style="font-size:0.72rem;color:#999"><%= @topic.created_at.strftime("%Y-%m-%d %H:%M") %> &middot; <%= @topic.views_count %> 浏览 &middot; <%= @comments.count %> 评论 &middot; <%= @topic.cools_count %> cool</div>
+      </div>
+    </div>
+
+    <!-- Poll Section -->
+    <% if @poll.present? %>
+      <div style="margin:14px 20px;padding:14px;border:1px solid #e9ecef;border-radius:8px;background:#fafbfc">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:0.88rem;font-weight:700;color:#333">
+            <i class="bi bi-bar-chart-line" style="color:#0d6efd"></i> 投票
+          </div>
+          <span style="font-size:0.72rem;color:#999"><i class="bi bi-people"></i> <%= @poll.total_votes %> 人参与</span>
+        </div>
+        <% if @poll.closed? %>
+          <div style="padding:4px 8px;background:#e9ecef;border-radius:4px;font-size:0.72rem;color:#6c757d;margin-bottom:8px">
+            <i class="bi bi-lock"></i> 投票已结束
+          </div>
+        <% end %>
+        <% @poll.poll_options.each_with_index do |option, idx| %>
+          <% percentage = option.vote_percentage %>
+          <div style="margin-bottom:8px;padding:10px;border:1px solid #e9ecef;border-radius:6px;background:#fff">
+            <div style="display:flex;align-items:center;margin-bottom:6px">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;background:#e9ecef;font-size:0.72rem;font-weight:700;color:#495057;flex-shrink:0;margin-right:8px"><%= ('A'..'Z').to_a[idx] %></span>
+              <span style="font-size:0.82rem;color:#333;flex:1;word-break:break-word"><%= option.title %></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:6px;background:#e9ecef;border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:<%= percentage %>%;background:#0d6efd;border-radius:3px;min-width:<%= percentage > 0 ? '4px' : '0' %>"></div>
+              </div>
+              <span style="font-size:0.72rem;color:#666;flex-shrink:0;min-width:32px;text-align:right"><%= percentage %>%</span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Topic Content -->
+    <div id="poster-topic-content" style="padding:14px 20px;font-size:0.9rem;line-height:1.7;word-break:break-word;color:#333"></div>
+
+    <!-- Comments Section -->
+    <% if @comments.present? %>
+      <div style="border-top:1px solid #f0f0f0">
+        <div style="padding:12px 20px;font-size:0.88rem;font-weight:700;color:#333;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:6px">
+          <i class="bi bi-chat-dots" style="color:#999"></i> 评论 (<%= @comments.count %>)
+        </div>
+        <% @comments.each do |comment| %>
+          <div style="padding:12px 20px;border-bottom:1px solid #f5f5f5;display:flex;gap:10px">
+            <% if comment.user.has_avatar? %>
+              <img src="<%= comment.user.avatar_data_url %>" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0" alt="">
+            <% else %>
+              <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:0.7rem;background:#6c757d;flex-shrink:0">
+                <%= user_initial(comment.user) %>
+              </div>
+            <% end %>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                <span style="font-size:0.8rem;font-weight:600;color:#333"><%= comment.user.display_name %></span>
+                <span style="font-size:0.68rem;color:#bbb"><%= time_ago_in_words(comment.created_at) %>前</span>
+                <% tip_total = Tip.total_amount_for(comment) %>
+                <% if tip_total > 0 %>
+                  <span style="font-size:0.68rem;color:#f59e0b"><i class="bi bi-gift"></i> <%= tip_total %></span>
+                <% end %>
+              </div>
+              <% if comment.parent.present? %>
+                <div style="margin-bottom:6px;padding:6px 8px;background:#f8f9fa;border-left:3px solid #0d6efd;border-radius:0 4px 4px 0;font-size:0.75rem">
+                  <span style="color:#0d6efd;font-weight:600">@<%= comment.parent.user.display_name %></span>
+                  <span style="color:#666;margin-left:4px"><%= truncate(comment.parent.content, length: 100) %></span>
+                </div>
+              <% end %>
+              <div style="font-size:0.82rem;color:#444;line-height:1.6;word-break:break-word"><%= render_mentions(comment.content) %></div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Footer -->
+    <div style="padding:16px 20px;border-top:1px solid #f0f0f0;display:flex;align-items:center;gap:14px">
+      <div id="poster-qr-code" style="flex-shrink:0"></div>
+      <div>
+        <div style="font-size:0.7rem;color:#bbb;margin-bottom:4px">
+          来自 SoloDev.Cool 独立开发者社区<br>扫码或访问链接查看更多
+        </div>
+        <div id="poster-footer-link" style="font-size:0.68rem;color:#0d6efd;word-break:break-all"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var raw = document.getElementById('topic-content-raw');
+  var rendered = document.getElementById('topic-content-rendered');
+  var isSignedIn = <%= user_signed_in? %>;
+  if (raw && rendered && typeof marked !== 'undefined') {
+    // Pre-process registered-only blocks: convert :::registered-only ... ::: to HTML divs
+    var content = raw.value.replace(/:::registered-only\n([\s\S]*?):::/g, function(match, inner) {
+      return '<div class="registered-only-block">' + marked.parse(inner.trim()) + '</div>';
+    });
+    rendered.innerHTML = marked.parse(content);
+
+    // For logged-in users, add a badge to indicate registered-only content
+    if (isSignedIn) {
+      rendered.querySelectorAll('.registered-only-block').forEach(function(block) {
+        var badge = document.createElement('div');
+        badge.className = 'registered-only-badge';
+        badge.innerHTML = '<i class="bi bi-eye-fill"></i> 仅注册用户可见';
+        block.insertBefore(badge, block.firstChild);
+      });
+    } else {
+      rendered.querySelectorAll('.registered-only-block').forEach(function(block) {
+        block.innerHTML = '<div class="registered-only-placeholder">' +
+          '<div class="registered-only-placeholder-icon"><i class="bi bi-lock-fill"></i></div>' +
+          '<div class="registered-only-placeholder-text">此部分内容仅注册用户可见</div>' +
+          '<a href="<%= new_user_session_path %>" class="btn btn-sm btn-outline-primary rounded-pill px-3 mt-2">登录查看</a>' +
+          '</div>';
+      });
+    }
+    raw.remove();
+  }
+
+  document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(el) {
+    new bootstrap.Popover(el);
+  });
+
+  // Initialize @mention for new comment input
+  var newCommentInput = document.getElementById('new-comment-input');
+  if (newCommentInput) {
+    initMention(newCommentInput);
+  }
+
+  // Initialize @mention for reply forms
+  document.querySelectorAll('.reply-form textarea').forEach(function(textarea) {
+    initMention(textarea);
+  });
+});
+
+function toggleReplyForm(btn) {
+  var form = btn.closest('.flex-grow-1').querySelector('.reply-form');
+  var isVisible = form.style.display !== 'none';
+  document.querySelectorAll('.reply-form').forEach(function(f) { f.style.display = 'none'; });
+  if (!isVisible) form.style.display = 'block';
+}
+
+function cancelReply(btn) {
+  btn.closest('.reply-form').style.display = 'none';
+}
+
+// Poll vote
+function handlePollVote(el, topicId, optionId) {
+  if (el.dataset.voted === 'true') return;
+  if (!document.querySelector('meta[name="csrf-token"]')) return;
+
+  var token = document.querySelector('meta[name="csrf-token"]').content;
+
+  fetch('/topics/' + topicId + '/poll/vote', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ poll_option_id: optionId })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.success) {
+      // Show all bars and percentages
+      document.querySelectorAll('.poll-option').forEach(function(opt) {
+        opt.dataset.voted = 'true';
+        opt.style.cursor = 'default';
+
+        // Remove old bar/meta if exists
+        var oldBar = opt.querySelector('.poll-option-bar');
+        if (oldBar) oldBar.remove();
+        var oldMeta = opt.querySelector('.poll-option-meta');
+        if (oldMeta) oldMeta.remove();
+
+        // Remove old check
+        var oldCheck = opt.querySelector('.poll-option-check');
+        if (oldCheck) oldCheck.remove();
+        opt.classList.remove('poll-option-selected');
+
+        // Find matching option data
+        var optId = parseInt(opt.dataset.optionId);
+        var optData = data.options.find(function(o) { return o.id === optId; });
+        if (optData) {
+          // Add bar
+          var bar = document.createElement('div');
+          bar.className = 'poll-option-bar';
+          var barFill = document.createElement('div');
+          barFill.className = 'poll-option-bar-fill';
+          barFill.style.width = optData.percentage + '%';
+          bar.appendChild(barFill);
+          opt.appendChild(bar);
+
+          // Add meta
+          var meta = document.createElement('div');
+          meta.className = 'poll-option-meta';
+          meta.innerHTML = '<span>' + optData.percentage + '%</span><span>' + optData.votes_count + ' 票</span>';
+          opt.appendChild(meta);
+
+          // Highlight selected
+          if (optData.id === optionId) {
+            opt.classList.add('poll-option-selected');
+            var check = document.createElement('i');
+            check.className = 'bi bi-check-circle-fill poll-option-check';
+            opt.querySelector('.poll-option-label').appendChild(check);
+          }
+        }
+      });
+
+      // Update total votes
+      var totalEl = document.getElementById('poll-total-votes');
+      if (totalEl) totalEl.textContent = data.total_votes;
+    } else {
+      alert(data.error || '投票失败');
+    }
+  })
+  .catch(function() {
+    alert('投票失败，请重试');
+  });
+}
+
+// Cool button
+document.addEventListener('DOMContentLoaded', function() {
+  var coolBtn = document.getElementById('cool-btn');
+  if (coolBtn) {
+    coolBtn.addEventListener('click', function() {
+      var topicId = this.dataset.topicId;
+      var isCooled = this.dataset.cooled === 'true';
+      var token = document.querySelector('meta[name="csrf-token"]').content;
+
+      fetch('/topics/' + topicId + '/cool', {
+        method: isCooled ? 'DELETE' : 'POST',
+        headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },
+        credentials: 'same-origin'
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        document.getElementById('cools-count').textContent = data.cools_count;
+        coolBtn.dataset.cooled = data.action === 'cooled' ? 'true' : 'false';
+        if (data.action === 'cooled') {
+          coolBtn.classList.add('cooled');
+        } else {
+          coolBtn.classList.remove('cooled');
+        }
+      });
+    });
+  }
+
+  // Tip buttons
+  document.querySelectorAll('.tip-trigger').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      showTipModal(this);
+    });
+  });
+
+  // Comment cool buttons
+  document.querySelectorAll('.comment-cool-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var commentId = this.dataset.commentId;
+      var isCooled = this.dataset.cooled === 'true';
+      var token = document.querySelector('meta[name="csrf-token"]').content;
+      var self = this;
+
+      fetch('/topics/' + this.dataset.topicId + '/comments/' + commentId + '/cool', {
+        method: isCooled ? 'DELETE' : 'POST',
+        headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },
+        credentials: 'same-origin'
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        self.querySelector('.comment-cools-count').textContent = data.cools_count;
+        self.dataset.cooled = data.action === 'cooled' ? 'true' : 'false';
+        if (data.action === 'cooled') {
+          self.classList.add('cooled');
+        } else {
+          self.classList.remove('cooled');
+        }
+      });
+    });
+  });
+});
+
+// Tip modal
+var tipModal = null;
+function showTipModal(btn) {
+  var commentId = btn.dataset.commentId;
+  var commentUser = btn.dataset.commentUser;
+  var topicId = btn.dataset.topicId;
+  var currentPoints = parseInt(btn.dataset.currentPoints);
+  var tipTotal = parseInt(btn.dataset.tipTotal);
+  var amounts = [10, 20, 30, 50, 100];
+
+  if (tipModal) { tipModal.remove(); }
+
+  var html = '<div class="modal fade" id="tipModal" tabindex="-1">' +
+    '<div class="modal-dialog modal-sm modal-dialog-centered">' +
+    '<div class="modal-content rounded-3 overflow-hidden border-0 shadow">' +
+      '<div class="modal-body p-4 text-center">' +
+        '<div class="mb-3"><i class="bi bi-gift-fill text-warning" style="font-size:2rem"></i></div>' +
+        '<h6 class="fw-bold mb-1">打赏 ' + commentUser + '</h6>' +
+        '<p class="text-muted mb-3" style="font-size:0.78rem">当前酷能量：<strong>' + currentPoints + '</strong></p>' +
+        '<div class="d-flex flex-wrap justify-content-center gap-2 mb-3" id="tip-amounts">';
+  amounts.forEach(function(a) {
+    var disabled = a > currentPoints ? ' disabled' : '';
+    var cls = a === 10 ? 'btn-warning text-white' : 'btn-outline-warning';
+    html += '<button type="button" class="btn btn-sm rounded-pill tip-amount ' + cls + '"' + disabled + ' data-amount="' + a + '">' + a + '</button>';
+  });
+  html += '</div>' +
+        '<div id="tip-error" class="text-danger small mb-2" style="display:none"></div>' +
+        '<div class="d-flex gap-2 justify-content-center">' +
+          '<button type="button" class="btn btn-sm btn-light rounded-pill px-3" data-bs-dismiss="modal">取消</button>' +
+          '<button type="button" class="btn btn-sm btn-warning text-white rounded-pill px-3" id="tip-confirm-btn" disabled>确认打赏</button>' +
+        '</div>' +
+      '</div>' +
+    '</div></div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  tipModal = new bootstrap.Modal(document.getElementById('tipModal'));
+
+  var selectedAmount = null;
+  var confirmBtn = document.getElementById('tip-confirm-btn');
+  var errorEl = document.getElementById('tip-error');
+
+  document.querySelectorAll('.tip-amount').forEach(function(b) {
+    b.addEventListener('click', function() {
+      if (this.disabled) return;
+      document.querySelectorAll('.tip-amount').forEach(function(x) { x.classList.remove('btn-warning', 'text-white'); x.classList.add('btn-outline-warning'); });
+      this.classList.remove('btn-outline-warning');
+      this.classList.add('btn-warning', 'text-white');
+      selectedAmount = parseInt(this.dataset.amount);
+      confirmBtn.disabled = false;
+      errorEl.style.display = 'none';
+    });
+  });
+
+  confirmBtn.addEventListener('click', function() {
+    if (!selectedAmount) return;
+    var token = document.querySelector('meta[name="csrf-token"]').content;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '打赏中...';
+
+    fetch('/topics/' + topicId + '/tips', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ amount: selectedAmount, comment_id: commentId })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      tipModal.hide();
+      if (data.success) {
+        btn.dataset.currentPoints = data.points;
+        btn.dataset.tipTotal = data.tip_total;
+        btn.closest('.flex-grow-1').querySelector('.tip-info')?.remove();
+        if (data.tip_total > 0) {
+          var badge = '<div class="tip-info mt-1"><span class="tip-badge"><i class="bi bi-gift me-1"></i>已获打赏 <strong>' + data.tip_total + '</strong> 酷能量</span></div>';
+          btn.closest('.flex-grow-1').querySelector('div[style*="line-height:1.6"]').insertAdjacentHTML('afterend', badge);
+        }
+      } else {
+        errorEl.textContent = data.message;
+        errorEl.style.display = 'block';
+      }
+    })
+    .catch(function() {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '确认打赏';
+    });
+  });
+
+  document.getElementById('tipModal').addEventListener('hidden.bs.modal', function() {
+    tipModal = null;
+    document.getElementById('tipModal').remove();
+  });
+
+  tipModal.show();
+}
+
+// @ Mention functionality
+function initMention(textarea) {
+  let mentionMenu = null;
+  let currentQuery = '';
+  let matchedUsers = [];
+  let selectedIndex = 0;
+  let mentionStartPos = 0;
+
+  function createMentionMenu() {
+    if (mentionMenu) return;
+    mentionMenu = document.createElement('div');
+    mentionMenu.className = 'mention-menu';
+    mentionMenu.style.cssText = 'position:absolute;z-index:1000;background:#fff;border:1px solid #dee2e6;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.15);max-height:200px;overflow-y:auto;display:none';
+    document.body.appendChild(mentionMenu);
+  }
+
+  function showMentionMenu(x, y) {
+    createMentionMenu();
+    mentionMenu.style.display = 'block';
+    mentionMenu.style.left = x + 'px';
+    mentionMenu.style.top = (y + 24) + 'px';
+  }
+
+  function hideMentionMenu() {
+    if (mentionMenu) mentionMenu.style.display = 'none';
+    currentQuery = '';
+    matchedUsers = [];
+  }
+
+  function renderMenu() {
+    if (!mentionMenu || matchedUsers.length === 0) {
+      hideMentionMenu();
+      return;
+    }
+    mentionMenu.innerHTML = matchedUsers.map((u, i) => `
+      <div class="mention-item ${i === selectedIndex ? 'selected' : ''}" data-index="${i}" data-username="${u.username}">
+        <div style="display:flex;align-items:center;padding:8px 12px;cursor:pointer;${i === selectedIndex ? 'background:#f8f9fa;' : ''}">
+          ${u.avatar ? `<img src="${u.avatar}" style="width:24px;height:24px;border-radius:50%;margin-right:8px;">` : `<div style="width:24px;height:24px;border-radius:50%;background:#6366f1;margin-right:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;">${u.username[0].toUpperCase()}</div>`}
+          <span style="font-size:14px;color:#333;">${u.username}</span>
+        </div>
+      </div>
+    `).join('');
+
+    mentionMenu.querySelectorAll('.mention-item').forEach((item, index) => {
+      item.addEventListener('click', () => insertUser(matchedUsers[index].username));
+      item.addEventListener('mouseenter', () => {
+        selectedIndex = index;
+        renderMenu();
+      });
+    });
+  }
+
+  async function searchUsers(query) {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    try {
+      const res = await fetch('/users/search?q=' + encodeURIComponent(query), {
+        headers: { 'X-CSRF-Token': token ? token.content : '' }
+      });
+      matchedUsers = await res.json();
+      selectedIndex = 0;
+      renderMenu();
+    } catch (e) {
+      matchedUsers = [];
+      hideMentionMenu();
+    }
+  }
+
+  function insertUser(username) {
+    const textBefore = textarea.value.substring(0, mentionStartPos);
+    const textAfter = textarea.value.substring(textarea.selectionEnd);
+    textarea.value = textBefore + '@' + username + ' ' + textAfter;
+    textarea.selectionStart = textarea.selectionEnd = mentionStartPos + username.length + 2;
+    textarea.dispatchEvent(new Event('input'));
+    textarea.focus();
+    hideMentionMenu();
+  }
+
+  textarea.addEventListener('keydown', (e) => {
+    if (mentionMenu && mentionMenu.style.display !== 'none') {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % matchedUsers.length;
+        renderMenu();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + matchedUsers.length) % matchedUsers.length;
+        renderMenu();
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (matchedUsers[selectedIndex]) {
+          insertUser(matchedUsers[selectedIndex].username);
+        }
+      } else if (e.key === 'Escape') {
+        hideMentionMenu();
+      }
+    }
+  });
+
+  textarea.addEventListener('input', (e) => {
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.substring(0, cursorPos);
+
+    const lastAtIndex = textBefore.lastIndexOf('@');
+    if (lastAtIndex === -1) {
+      hideMentionMenu();
+      return;
+    }
+
+    const textAfterAt = textBefore.substring(lastAtIndex + 1);
+    const spaceAfterAt = textAfterAt.indexOf(' ');
+    if (spaceAfterAt !== -1 || textAfterAt.length === 0) {
+      hideMentionMenu();
+      return;
+    }
+
+    if (textAfterAt.length >= 1) {
+      mentionStartPos = lastAtIndex;
+      const textareaRect = textarea.getBoundingClientRect();
+      const line = textarea.value.substring(0, cursorPos).split('\n').length - 1;
+      const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+      const scrollTop = textarea.scrollTop;
+      const x = textareaRect.left + 10;
+      const y = textareaRect.top + (line + 1) * lineHeight - scrollTop;
+
+      showMentionMenu(x, y);
+      if (currentQuery !== textAfterAt) {
+        currentQuery = textAfterAt;
+        searchUsers(textAfterAt);
+      }
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (mentionMenu && !mentionMenu.contains(e.target) && e.target !== textarea) {
+      hideMentionMenu();
+    }
+  });
+}
+</script>
+
+<script>
+function generatePoster() {
+  const renderedContent = document.getElementById('topic-content-rendered');
+  const posterContent = document.getElementById('poster-topic-content');
+  const posterFooter = document.getElementById('poster-footer-link');
+  const posterQR = document.getElementById('poster-qr-code');
+  if (!renderedContent || !posterContent) return;
+
+  // Fill content
+  posterContent.innerHTML = renderedContent.innerHTML;
+
+  // Remove registered-only content from poster
+  posterContent.querySelectorAll('.registered-only-block').forEach(function(block) {
+    var placeholder = document.createElement('div');
+    placeholder.style.cssText = 'padding:10px 14px;background:#f8f9fa;border:1px solid #e9ecef;border-radius:6px;text-align:center;font-size:0.78rem;color:#6c757d';
+    placeholder.innerHTML = '<i class="bi bi-lock-fill"></i> 此部分内容仅注册用户可见';
+    block.replaceWith(placeholder);
+  });
+
+  // Constrain images to fit poster width (390px - 40px padding = 350px)
+  posterContent.querySelectorAll('img').forEach(function(img) {
+    img.style.maxWidth = '100%';
+    img.style.height = 'auto';
+  });
+
+  const url = window.location.origin + window.location.pathname;
+  posterFooter.textContent = url;
+
+  // Generate QR code
+  if (posterQR && typeof qrcode !== 'undefined') {
+    posterQR.innerHTML = '';
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    posterQR.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    const svg = posterQR.querySelector('svg');
+    if (svg) {
+      svg.style.width = '64px';
+      svg.style.height = '64px';
+      svg.style.borderRadius = '6px';
+    }
+  }
+
+  const container = document.getElementById('poster-container');
+
+  html2canvas(container, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    width: 390,
+    windowWidth: 390,
+    logging: false
+  }).then(function(canvas) {
+    const link = document.createElement('a');
+    link.download = '<%= @topic.title.truncate(30).gsub(/[\\\/:*?"<>|]/, '_') %>_长图.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(function(err) {
+    console.error('Poster generation failed:', err);
+    alert('生成长图失败，请稍后重试');
+  });
+}
+</script>

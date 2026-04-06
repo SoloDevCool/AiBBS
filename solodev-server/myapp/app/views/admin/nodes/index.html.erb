@@ -1,0 +1,211 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="text-dark fw-bold mb-0">节点管理</h4>
+  <%= link_to new_admin_node_path, class: "btn btn-primary rounded-pill px-3" do %>
+    <i class="bi bi-plus-lg me-1"></i>新建节点
+  <% end %>
+</div>
+
+<!-- 系统节点 -->
+<div class="card card-admin mb-4">
+  <div class="card-header bg-white">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-gear text-primary"></i>
+      <h6 class="mb-0 text-primary fw-semibold">系统节点</h6>
+      <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill"><%= @system_nodes.count %></span>
+      <small class="text-muted ms-auto">支持拖拽排序</small>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="system-nodes-table">
+        <thead>
+          <tr>
+            <th class="ps-3" style="width:40px"></th>
+            <th>节点</th>
+            <th class="d-none d-md-table-cell">描述</th>
+            <th class="text-center">主题数</th>
+            <th class="pe-3 text-end">操作</th>
+          </tr>
+        </thead>
+        <tbody id="system-nodes-tbody" data-sort-url="<%= reorder_admin_nodes_path %>">
+          <% @system_nodes.each do |node| %>
+            <tr data-node-id="<%= node.id %>" class="draggable-row">
+              <td class="ps-3">
+                <i class="bi bi-grip-vertical text-muted" style="cursor:move"></i>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <span class="me-2" style="font-size:1.3rem"><%= node.icon.presence || "📄" %></span>
+                  <div>
+                    <div class="fw-semibold"><%= node.name %></div>
+                    <small class="text-muted"><%= node.slug %></small>
+                  </div>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell text-muted">
+                <small><%= truncate(node.description.to_s, length: 50) %></small>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-dark rounded-pill"><%= node.topics_count %></span>
+              </td>
+              <td class="pe-3 text-end">
+                <div class="d-flex justify-content-end gap-1">
+                  <%= link_to edit_admin_node_path(node), class: "btn-action btn btn-sm btn-outline-primary border-0" do %>
+                    <i class="bi bi-pencil"></i>
+                  <% end %>
+                  <%= button_to admin_node_path(node), method: :delete,
+                      class: "btn-action btn btn-sm btn-outline-danger border-0",
+                      data: { confirm: "确定删除节点「#{node.name}」吗？" } do %>
+                    <i class="bi bi-trash"></i>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+          <% if @system_nodes.empty? %>
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                <small>暂无系统节点</small>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 兴趣节点 -->
+<div class="card card-admin">
+  <div class="card-header bg-white">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-star text-success"></i>
+      <h6 class="mb-0 text-success fw-semibold">兴趣节点</h6>
+      <span class="badge bg-success bg-opacity-10 text-success rounded-pill"><%= @interest_nodes.count %></span>
+      <small class="text-muted ms-auto">按主题数排序</small>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">节点</th>
+            <th class="d-none d-md-table-cell">描述</th>
+            <th class="text-center">主题数</th>
+            <th class="pe-3 text-end">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @interest_nodes.each do |node| %>
+            <tr>
+              <td class="ps-3">
+                <div class="d-flex align-items-center">
+                  <span class="me-2" style="font-size:1.3rem"><%= node.icon.presence || "📄" %></span>
+                  <div>
+                    <div class="fw-semibold"><%= node.name %></div>
+                    <small class="text-muted"><%= node.slug %></small>
+                  </div>
+                </div>
+              </td>
+              <td class="d-none d-md-table-cell text-muted">
+                <small><%= truncate(node.description.to_s, length: 50) %></small>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-light text-dark rounded-pill"><%= node.topics_count %></span>
+              </td>
+              <td class="pe-3 text-end">
+                <div class="d-flex justify-content-end gap-1">
+                  <%= link_to edit_admin_node_path(node), class: "btn-action btn btn-sm btn-outline-primary border-0" do %>
+                    <i class="bi bi-pencil"></i>
+                  <% end %>
+                  <%= button_to admin_node_path(node), method: :delete,
+                      class: "btn-action btn btn-sm btn-outline-danger border-0",
+                      data: { confirm: "确定删除节点「#{node.name}」吗？" } do %>
+                    <i class="bi bi-trash"></i>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+          <% if @interest_nodes.empty? %>
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">
+                <small>暂无兴趣节点</small>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tbody = document.getElementById('system-nodes-tbody');
+  if (!tbody) return;
+
+  let draggedRow = null;
+  const rows = tbody.querySelectorAll('.draggable-row');
+
+  rows.forEach(row => {
+    row.draggable = true;
+
+    row.addEventListener('dragstart', function(e) {
+      draggedRow = this;
+      this.style.opacity = '0.5';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    row.addEventListener('dragend', function() {
+      this.style.opacity = '1';
+      draggedRow = null;
+    });
+
+    row.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      return false;
+    });
+
+    row.addEventListener('dragenter', function() {
+      this.classList.add('bg-light');
+    });
+
+    row.addEventListener('dragleave', function() {
+      this.classList.remove('bg-light');
+    });
+
+    row.addEventListener('drop', function(e) {
+      e.stopPropagation();
+      this.classList.remove('bg-light');
+
+      if (draggedRow !== this) {
+        tbody.insertBefore(draggedRow, this);
+        saveOrder();
+      }
+
+      return false;
+    });
+  });
+
+  function saveOrder() {
+    const nodeIds = Array.from(tbody.querySelectorAll('.draggable-row')).map(row => row.dataset.nodeId);
+    const url = tbody.dataset.sortUrl;
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: 'node_ids[]=' + nodeIds.join('&node_ids[]=')
+    }).then(response => {
+      if (response.ok) {
+        console.log('节点顺序保存成功');
+      }
+    });
+  }
+});
+</script>
