@@ -1,24 +1,137 @@
-# README
+# AiBBS - 面向下一个十年的 AI + 云原生社区系统
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+> 集社区论坛、在线课程、AI 智能运营、内容变现于一体。一套系统，覆盖社区运营的方方面面，让你的社区从 0 到 1 快速起航。
 
-Things you may want to cover:
+🌐 官网：[https://aibbs.solodev.cool/](https://aibbs.solodev.cool/)
+🎯 演示站：[https://solodev.cool](https://solodev.cool)
 
-* Ruby version
+## 功能特性
 
-* System dependencies
+### 社区论坛
 
-* Configuration
+支持 Markdown 发帖、分类节点、嵌套评论、投票民调、转发转载。点赞、打赏和关注系统，让社区互动更有趣。
 
-* Database creation
+- Markdown 渲染 + SEO 友好 URL
+- 嵌套评论 + VIP 可见控制
+- 投票 / 民调 / @提及
+- 话题排序（最新/最热/趋势）
 
-* Database initialization
+### 在线课堂
 
-* How to run the test suite
+课程 → 章节 → 课时三级结构，支持视频课、文本课、测验课。深度集成云原生视频服务，免费试看 + 付费解锁。
 
-* Services (job queues, cache servers, search engines, etc.)
+- 视频 / 文本 / 测验三种课时
+- 云原生视频防盗链播放
+- 丰富的课程内容管理
+- 讲师管理 + 难度分级
 
-* Deployment instructions
+### AI 智能运营
 
-* ...
+接入大语言模型，自动生成社区话题和评论。所有 AI 生成内容均支持自动添加 AI 标识，满足合规要求。可配置每日数量、时间段，支持草稿审核模式。
+
+- AI 自动发帖 + 自动评论
+- 自定义 Prompt + 联网搜索
+- 定时调度（8:00-22:00）
+- 草稿模式 + 人工审核
+
+### 内容变现
+
+VIP 付费内容 + 积分解锁 + 打赏体系。让优质内容创作者获得收益，构建可持续的社区生态。
+
+- VIP 专属内容
+- 积分解锁系统
+- 打赏 / 每日签到
+- 邀请码 + 付费注册
+
+### 社交网络
+
+关注/屏蔽用户、实时通知体系、KOL 达人展示、微信/QQ 交流群管理。打造属于你的开发者社交圈。
+
+- 用户关注 + 屏蔽
+- 8 种通知类型
+- KOL 达人展示 + 多平台链接
+- 交流群管理
+
+### 管理后台
+
+50+ 项系统配置，全方位的运营管理工具。从用户管理到内容审核，从 SEO 设置到外观定制，一切尽在掌握。
+
+- 仪表盘 + 数据概览
+- 运营账号批量生成
+- 50+ 系统配置项
+- Logo / 外观 / SEO 定制
+
+## 技术架构
+
+| 技术 | 说明 |
+|------|------|
+| **Ruby on Rails 8** | 后端框架，使用 Solid Queue/Cache/Cable，原生异步任务处理 |
+| **PostgreSQL** | 企业级关系数据库，强大的 JSONB 支持、全文搜索 |
+| **Flutter** | 移动端跨平台，一套代码同时构建 iOS 和 Android 原生 App |
+| **Docker** | 完整的容器化方案，配合 Kamal 一键部署 |
+| **Bootstrap 5 + Hotwire** | Turbo/Stimulus 前沿前端架构，支持明暗切换，SPA 技术的服务端渲染 |
+| **云原生架构** | 云原生视频点播、对象存储、邮件服务等深度集成 |
+
+## 版本定价
+
+| | 开源版 | 专业版 | 企业版 |
+|--|--------|--------|--------|
+| **价格** | 永久免费 | ¥299 | ¥3,600 |
+| **社区论坛** | ✅ | ✅ | ✅ |
+| **用户系统 + OAuth** | ✅ | ✅ | ✅ |
+| **管理后台** | 基础功能 | 完整功能（50+ 配置） | 完整功能（50+ 配置） |
+| **明暗主题 + 响应式** | ✅ | ✅ | ✅ |
+| **Docker 部署** | ✅ | ✅ | ✅ |
+| **在线课程体系** | ❌ | ✅ | ✅ |
+| **Flutter 移动端 App** | ❌ | ✅ | ✅ |
+| **手机验证 / 实名认证** | ❌ | ✅ | ✅ |
+| **合规套件** | ❌ | ✅ | ✅ |
+| **AI 智能运营** | ❌ | ✅ | ✅ |
+| **VIP 付费 / 积分变现** | ❌ | ✅ | ✅ |
+| **运营工具 / KOL 管理** | ❌ | ✅ | ✅ |
+| **商业授权** | ❌ | 1 个域名（可无限换绑） | 10 个主域名 + 不限用户数 |
+| **技术支持** | 社区支持 | 6 个月邮件支持 | 1 年优先技术支持 + 部署协助 |
+
+> 所有版本均为一次性买断，无月费、无年费、无隐藏费用。购买即获完整源码，支持自行部署和二次开发。
+
+## 快速开始
+
+```bash
+# 克隆项目
+git clone https://github.com/your-org/aibbs.git
+
+# 进入目录
+cd aibbs
+
+# Docker 一键启动
+docker compose up -d
+```
+
+## 项目结构
+
+```
+aibbs/
+├── website/          # 官网
+├── solodev-server/   # 后端服务（Ruby on Rails 8）
+├── solodev-app/      # 移动端（Flutter）
+├── license-server/   # 授权服务
+└── Dockerfile        # 容器化部署
+```
+
+## 常见问题
+
+**适合什么场景？**
+兴趣社区、BBS 专业领域社区、知识付费平台、在线教育平台、技术论坛等各种社区运营场景。
+
+**AI 智能运营需要额外付费吗？**
+AI 功能包含在专业版和企业版中，无需额外付费。需要自行提供 LLM API Key（兼容 OpenAI 格式，如 OpenAI、DeepSeek、通义千问等）。
+
+**支持哪些部署方式？**
+支持 Docker 容器化部署和 Kamal 一键部署，也支持传统方式部署到任意 Linux 服务器。推荐配置：2 核 4G 内存起步。
+
+**可以进行二次开发吗？**
+所有版本均提供完整源码，后端基于 Ruby on Rails 8，前端使用 Bootstrap + Hotwire，移动端使用 Flutter，代码结构清晰，便于二次开发。
+
+## License
+
+本项目遵循相应开源协议发布。商业使用请购买专业版或企业版获取商业授权许可。
