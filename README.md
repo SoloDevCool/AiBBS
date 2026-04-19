@@ -2,8 +2,8 @@
 
 > 集社区论坛、在线课程、AI 智能运营、内容变现于一体。一套系统，覆盖社区运营的方方面面，让你的社区从 0 到 1 快速起航。
 
-🌐 官网：[https://aibbs.solodev.cool/](https://aibbs.solodev.cool/)
-🎯 演示站：[https://solodev.cool](https://solodev.cool)
+- 🌐 官网：[https://aibbs.solodev.cool/](https://aibbs.solodev.cool/)
+-  🎯 演示站：[https://solodev.cool](https://solodev.cool)
 
 ## 功能特性
 
@@ -105,17 +105,6 @@ cd aibbs
 
 # Docker 一键启动
 docker compose up -d
-```
-
-## 项目结构
-
-```
-aibbs/
-├── website/          # 官网
-├── solodev-server/   # 后端服务（Ruby on Rails 8）
-├── solodev-app/      # 移动端（Flutter）
-├── license-server/   # 授权服务
-└── Dockerfile        # 容器化部署
 ```
 
 ## 常见问题
