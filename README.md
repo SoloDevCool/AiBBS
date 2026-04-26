@@ -5,7 +5,7 @@
 - 🌐 官网：[https://aibbs.solodev.cool/](https://aibbs.solodev.cool/)
 -  🎯 演示站：[https://solodev.cool](https://solodev.cool)
 
--  技术支持：添加VX：Mr-zhongwenzhi
+-  技术支持：添加QQ：2171750591
 
 ## 功能特性
 
