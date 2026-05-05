@@ -1,13 +1,16 @@
 # AiBBS - 面向下一个十年的 AI + 云原生社区系统
 
+<img width="1209" height="630" alt="image" src="https://github.com/user-attachments/assets/eeb58b00-1953-4165-9724-ac3b112f2461" />
+
+
 > 集社区论坛、在线课程、AI 智能运营、内容变现于一体。一套系统，覆盖社区运营的方方面面，让你的社区从 0 到 1 快速起航。
 
 - 🌐 官网：[https://aibbs.solodev.cool/](https://aibbs.solodev.cool/)
 -  🎯 演示站：[https://aibbs.oxida.cn](https://aibbs.oxida.cn)
    - 默认账号：admin@example.com
-   - 默认密码：
+   - 默认密码：admin@example.com
 
--  技术支持：添加QQ：1665201057
+-  技术支持与商业化购买咨询请添加QQ：1665201057
 
 ## 功能特性
 
