@@ -3,9 +3,11 @@
 > 集社区论坛、在线课程、AI 智能运营、内容变现于一体。一套系统，覆盖社区运营的方方面面，让你的社区从 0 到 1 快速起航。
 
 - 🌐 官网：[https://aibbs.solodev.cool/](https://aibbs.solodev.cool/)
--  🎯 演示站：[https://solodev.cool](https://solodev.cool)
+-  🎯 演示站：[https://aibbs.oxida.cn](https://aibbs.oxida.cn)
+   - 默认账号：admin@example.com
+   - 默认密码：
 
--  技术支持：添加QQ：2171750591
+-  技术支持：添加QQ：1665201057
 
 ## 功能特性
 
